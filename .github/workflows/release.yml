@@ -1,0 +1,31 @@
+# v から始まるタグを push すると、GitHub のリリースを作成してアプリの zip を添付する。
+# リリースノートは .github/release-notes/<タグ名>.md を使う (なければ自動生成)。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build zip
+        run: |
+          name="Unity-Block-Coder-${GITHUB_REF_NAME}"
+          mkdir "$name"
+          cp -r index.html css js README.md LICENSE "$name"/
+          zip -r "$name.zip" "$name"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          gh release create "$GITHUB_REF_NAME" "Unity-Block-Coder-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" "$@"
