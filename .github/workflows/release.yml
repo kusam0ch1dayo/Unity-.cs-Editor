@@ -1,10 +1,17 @@
-# v から始まるタグを push すると、GitHub のリリースを作成してアプリの zip を添付する。
+# リリースを作成して、アプリの zip を添付する。
+# - Actions タブの「Run workflow」でタグ名 (例: v1.0.0) を入力すると、タグとリリースを作成する
+# - GitHub の画面でリリースを公開した場合は、そのリリースに zip を添付する
 # リリースノートは .github/release-notes/<タグ名>.md を使う (なければ自動生成)。
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'タグ名 (例: v1.0.0)'
+        required: true
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -12,20 +19,26 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Build zip
         run: |
-          name="Unity-Block-Coder-${GITHUB_REF_NAME}"
+          name="Unity-Block-Coder-${TAG}"
           mkdir "$name"
           cp -r index.html css js README.md LICENSE "$name"/
           zip -r "$name.zip" "$name"
 
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Create release or attach zip
         run: |
-          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
-          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
-          gh release create "$GITHUB_REF_NAME" "Unity-Block-Coder-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" "$@"
+          zip="Unity-Block-Coder-${TAG}.zip"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$zip" --clobber
+          else
+            notes=".github/release-notes/${TAG}.md"
+            if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+            gh release create "$TAG" "$zip" --target "$GITHUB_SHA" --title "$TAG" "$@"
+          fi
