@@ -39,6 +39,8 @@ async function open(browser, base, lang, init = {}, opts = {}) {
     window.confirm = () => true;
   }, [lang, { __version: VERSION, ...init }]);
   const page = await ctx.newPage();
+  // SLOW=4 などで CPU を遅くして、遅いマシンでの動きを確かめる
+  if (process.env.SLOW) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: +process.env.SLOW });
   page.errors = []; page.external = [];
   page.on('pageerror', e => page.errors.push(e.message));
   await page.route('**/*', r => {
