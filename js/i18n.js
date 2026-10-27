@@ -135,9 +135,7 @@ const I18N = {
   // ---- テンプレート
   '2D プレイヤー移動': '2D player movement', '左右移動とジャンプ (Rigidbody2D + 接地判定)': 'Move left/right and jump (Rigidbody2D + ground check)',
   '3D プレイヤー移動': '3D player movement', '前後移動と左右回転 (矢印キー / WASD)': 'Move forward/back and turn (arrow keys / WASD)', 'カメラ追従': 'Camera follow',
-  'プレイヤーを左寄りに映して追いかけるカメラ (2D / 3D)': 'A camera that follows the player and keeps it left of center (2D / 3D)',
-  '画面の中でのプレイヤーの位置 (x を + にすると左寄りに映る)': 'Player position on screen (a positive x shows the player left of center)',
-  '0 でぴったり追従。大きいほどなめらかだが、動いている間は少し遅れる': '0 follows exactly. Larger is smoother but lags a little while moving', '敵の生成': 'Enemy spawner', '一定間隔でランダムな位置にプレハブを出す': 'Spawn a prefab at random positions at intervals',
+  'ターゲットをなめらかに追いかけるカメラ': 'A camera that smoothly follows a target', '敵の生成': 'Enemy spawner', '一定間隔でランダムな位置にプレハブを出す': 'Spawn a prefab at random positions at intervals',
   '体力 (HP)': 'Health (HP)', 'ダメージ・HP バー (Slider)・倒れたら消える': 'Damage, HP bar (Slider), disappear when defeated', 'スコア管理': 'Score manager',
   'シングルトン・スコア表示・ハイスコア保存': 'Singleton, score display, saved high score', '弾': 'Bullet', 'まっすぐ飛んで、敵に当たったら消える': 'Flies straight and disappears when it hits an enemy',
   '回転するアイテム': 'Spinning item', '回転しながら上下にふわふわ動き、取ると消える': 'Spins and bobs up and down, disappears when picked up', '制限時間': 'Time limit',

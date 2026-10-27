@@ -1,6 +1,6 @@
 // オフライン用のサービスワーカー (GitHub Pages などの http(s) で開いたときだけ有効)。
 // ネットにつながるときは最新を取得してキャッシュを更新し、つながらないときはキャッシュを返す。
-const CACHE = 'unity-block-coder-v6';
+const CACHE = 'unity-block-coder-v5';
 const FILES = [
   './', 'index.html', 'css/style.css', 'js/i18n.js', 'js/help-data.js',
   'js/blocks.js', 'js/generator.js', 'js/toolbox.js', 'js/types.js', 'js/checker.js', 'js/autocomplete.js', 'js/importer.js', 'js/app.js',

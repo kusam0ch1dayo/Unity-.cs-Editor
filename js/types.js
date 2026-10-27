@@ -51,7 +51,7 @@ const STATICS = {
   Mathf: { PI: 'float', 'Abs()': 'float', 'Max()': 'float', 'Min()': 'float', 'Clamp()': 'float', 'Sqrt()': 'float', 'Sin()': 'float', 'Cos()': 'float',
     'Lerp()': 'float', 'Pow()': 'float', 'Round()': 'float', 'FloorToInt()': 'int', 'RoundToInt()': 'int' },
   Vector3: { zero: 'Vector3', one: 'Vector3', up: 'Vector3', down: 'Vector3', left: 'Vector3', right: 'Vector3', forward: 'Vector3', back: 'Vector3',
-    'Distance()': 'float', 'Lerp()': 'Vector3', 'Dot()': 'float', 'Cross()': 'Vector3', 'SmoothDamp()': 'Vector3' },
+    'Distance()': 'float', 'Lerp()': 'Vector3', 'Dot()': 'float', 'Cross()': 'Vector3' },
   Vector2: { zero: 'Vector2', one: 'Vector2', up: 'Vector2', down: 'Vector2', left: 'Vector2', right: 'Vector2', 'Distance()': 'float', 'Lerp()': 'Vector2' },
   Quaternion: { identity: 'Quaternion', 'Euler()': 'Quaternion', 'LookRotation()': 'Quaternion' },
   Input: { 'GetKey()': 'bool', 'GetKeyDown()': 'bool', 'GetKeyUp()': 'bool', 'GetAxis()': 'float', 'GetMouseButtonDown()': 'bool', mousePosition: 'Vector3' },
