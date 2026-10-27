@@ -78,9 +78,20 @@ GitHub Pages などで公開した場合も、一度開けば次からはオフ�
 | `js/learn.js` | ヘルプ・エラーの説明・ヒント・チュートリアル・かんたんモード・はじめての案内 |
 | `sw.js` | オフライン用のサービスワーカー |
 | `manifest.webmanifest`, `icons/` | アプリとしてインストールするときの名前とアイコン |
+| `tests/` | 自動テスト (`npm test`)。GitHub Actions で push のたびに実行 |
 | `vendor/` | 同梱ライブラリ (Blockly・tree-sitter)。詳細は `vendor/README.md` |
 
 ビルドは不要です。JS は通常の `<script>` で上から順に読み込み、グローバルの定数・関数を共有しています。
+
+## 自動テスト
+
+```sh
+npm ci
+npx playwright install chromium
+npm test
+```
+
+ブラウザ (Chromium) でアプリを開き、全ブロックの C# 生成・C# の読み込み (`tests/fixtures/`)・テンプレート・チュートリアル・英語表示・オフライン動作・拡張パック・保存 / 共有 / 履歴 / マイブロック / C# 編集を確かめます。GitHub Actions (`.github/workflows/test.yml`) でも push のたびに実行されます。
 
 ## 制限
 

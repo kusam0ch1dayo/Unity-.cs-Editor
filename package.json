@@ -1,0 +1,11 @@
+{
+  "name": "unity-block-coder",
+  "private": true,
+  "description": "Unity 向けのブロックプログラミング (Blockly → C#) の自動テスト用",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
