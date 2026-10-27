@@ -30,7 +30,7 @@ const UNITY_VALUES = { 'Input.mousePosition': 'Vector3', 'Camera.main': 'Camera'
 const MEMBER = { previousStatement: 'Member', nextStatement: 'Member' };
 const STMT = { previousStatement: null, nextStatement: null };
 
-Blockly.defineBlocksWithJsonArray(i18nBlocks([
+Blockly.defineBlocksWithJsonArray(withHelp(i18nBlocks([
   // クラス
   { type: 'class_def', message0: '%1 %2 class %3 : %4', message1: '%1', colour: C.cls, previousStatement: 'ClassAttr',
     args0: [{ type: 'field_checkbox', name: 'SER', checked: false }, { type: 'field_dropdown', name: 'ACCESS', options: [['public','public'],['internal','internal']] },
@@ -364,7 +364,7 @@ Blockly.defineBlocksWithJsonArray(i18nBlocks([
   { type: 'expr_stmt', message0: '実行 %1', colour: C.misc, ...STMT, args0: [{ type: 'input_value', name: 'EXPR' }], tooltip: '式を文として実行 (例: Instantiate)' },
   { type: 'raw_stmt', message0: 'C# 文 %1', colour: C.misc, ...STMT, args0: [{ type: 'field_ac', ac: 'var', name: 'CODE', text: 'rb.AddForce(Vector3.up * 5f);' }] },
   { type: 'raw_expr', message0: 'C# 式 %1', output: null, colour: C.misc, args0: [{ type: 'field_ac', ac: 'var', name: 'CODE', text: 'gameObject' }] },
-]));
+])));
 
 // 自作のループブロックの中でも break / continue を使えるようにする
 ['for_range', 'for_step', 'list_foreach', 'do_while'].forEach(t => Blockly.libraryBlocks.loops.loopTypes.add(t));

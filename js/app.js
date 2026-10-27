@@ -34,7 +34,7 @@ function update() {
   const st = document.getElementById('status');
   st.textContent = nE || nW ? `✖ ${nE}  ⚠ ${nW}` : '✔ OK';
   st.style.color = nE ? '#ff6b6b' : nW ? '#f5c04a' : '#7bd88f';
-  document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(tr(x.msg))}`
+  document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}" title="${esc(typeof explainError === 'function' ? explainError(x.msg) : '')}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(tr(x.msg))}`
       + `<small>${x.line ? tr('行 {0}', x.line) : esc(x.block.toString(28))}</small>`
       + (x.fixes || []).map((fx, j) => `<button class="fix" data-f="${i}:${j}" title="${tr('クリックで修正')}">${esc(tr(fx.label))}</button>`).join('') + '</div>').join('')
     : `<div class="ok">${tr('✔ エラーはありません')}</div>`) + (tsState ? `<div><small>${tr(tsState)}</small></div>` : '');
@@ -230,12 +230,15 @@ document.getElementById('reqSave').onclick = () => {
 renderCollected();
 
 // 問題 / 読み込みログ タブ
-const showTab = log => {
-  document.getElementById('issues').hidden = log; document.getElementById('importLog').hidden = !log;
-  document.getElementById('tabIssues').classList.toggle('on', !log); document.getElementById('tabLog').classList.toggle('on', log);
-};
-document.getElementById('tabIssues').onclick = () => showTab(false);
-document.getElementById('tabLog').onclick = () => showTab(true);
+const PANELS = { issues: 'tabIssues', help: 'tabHelp', hints: 'tabHints', importLog: 'tabLog' };
+function showPanel(name) {
+  for (const [panel, tab] of Object.entries(PANELS)) {
+    document.getElementById(panel).hidden = panel !== name;
+    document.getElementById(tab).classList.toggle('on', panel === name);
+  }
+}
+const showTab = log => showPanel(log ? 'importLog' : 'issues');
+Object.entries(PANELS).forEach(([panel, tab]) => document.getElementById(tab).onclick = () => showPanel(panel));
 const KIND = { raw_stmt: tr('C# 文'), raw_expr: tr('C# 式'), raw_member: tr('C# メンバー') };
 function renderLog(r) {
   const groups = new Map();

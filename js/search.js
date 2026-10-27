@@ -11,13 +11,13 @@ const SEARCH_ALIASES = {
 let searchIndex = null;
 function buildSearchIndex() {
   const tmp = new Blockly.Workspace(), out = [];
-  for (const c of toolbox.contents) for (const item of c.contents) {
+  for (const c of activeToolbox.contents) for (const item of c.contents) {
     let text = '';
     try {
       const b = Blockly.serialization.blocks.append({ type: item.type, fields: item.fields, inputs: item.inputs }, tmp);
       text = b.toString() + ' ' + (typeof b.tooltip === 'string' ? b.tooltip : '');
     } catch (e) {}
-    out.push({ item, text: `${item.type} ${c.name} ${SEARCH_ALIASES[CAT_JA.get(c)] || ''} ${text}`.toLowerCase() });
+    out.push({ item, text: `${item.type} ${c.name} ${SEARCH_ALIASES[CAT_JA.get(c.name)] || ''} ${text}`.toLowerCase() });
   }
   tmp.dispose();
   return out;

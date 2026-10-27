@@ -128,5 +128,7 @@ toolbox.contents.splice(toolbox.contents.findIndex(c => c.name === 'その他'),
     { type: 'attr', fields: { CODE: 'Tooltip("説明")' } }, { type: 'attr', fields: { CODE: 'HideInInspector' } }, 'class_attr']));
 
 // 表示言語に合わせてカテゴリ名やサンプルの文字を訳す (検索の別名は元の日本語名で引く)
-const CAT_JA = new Map(toolbox.contents.map(c => [c, c.name]));
+const jaNames = toolbox.contents.map(c => c.name);
 i18nJson(toolbox); i18nJson(sample);
+const CAT_JA = new Map(toolbox.contents.map((c, i) => [c.name, jaNames[i]]));
+let activeToolbox = toolbox;   // かんたんモードでは絞り込んだツールボックスになる

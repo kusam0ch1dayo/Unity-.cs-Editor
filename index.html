@@ -21,6 +21,8 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
   <input id="search" type="search" placeholder="🔍 ブロック検索 (Ctrl+K)" autocomplete="off">
   <button id="undo" title="取り消し (Ctrl+Z)">↶ 取り消し</button>
   <button id="redo" title="やり直し (Ctrl+Y / Ctrl+Shift+Z)">↷ やり直し</button>
+  <button id="learn">📚 学ぶ</button>
+  <button id="beginner" title="よく使うブロックだけ表示 (かんたんモード)">🔰 かんたん</button>
   <button id="templates">テンプレート</button>
   <button id="import">C# 読込</button>
   <button id="sample">サンプル読込</button>
@@ -48,18 +50,26 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
   <p id="tplMsg"></p>
   <div class="row end"><button id="tplClose">閉じる</button></div>
 </dialog>
+<dialog id="learnDlg">
+  <div id="learnBody"></div>
+  <div class="row end"><button id="learnClose">閉じる</button></div>
+</dialog>
+<dialog id="welcomeDlg"><div id="welcomeBody"></div></dialog>
 <div id="toast" hidden></div>
 <main>
-  <div id="left"><div id="tabs"></div><div id="blocks"></div></div>
+  <div id="left"><div id="tabs"></div><div id="blocks"></div><div id="tutor" hidden></div></div>
   <div id="side">
     <div class="bar"><span id="fname">Script.cs</span><b id="status"></b><label class="memo" title="ブロックに付けたメモ (右クリック →「コメントを追加」) を // コメントとして出力"><input type="checkbox" id="memoOut"> メモ出力</label><button id="copy">コピー</button><button id="dl" class="primary">.cs 保存</button><button id="zip" title="全タブのスクリプトを zip で保存">全部 zip</button></div>
     <pre id="code"></pre>
-    <div class="tabs"><button id="tabIssues" class="on">問題</button><button id="tabLog">読み込みログ</button></div>
+    <div class="tabs"><button id="tabIssues" class="on">問題</button><button id="tabHelp">ヘルプ</button><button id="tabHints">ヒント</button><button id="tabLog">読み込みログ</button></div>
     <div id="issues"></div>
+    <div id="help" hidden></div>
+    <div id="hints" hidden></div>
     <div id="importLog" hidden><div id="collectBar" hidden></div><div id="logBody"><div class="ok"><small>C# を読み込むと、ブロック化できなかった箇所と足りないブロックがここに表示されます</small></div></div></div>
   </div>
 </main>
 <script src="js/i18n.js"></script>
+<script src="js/help-data.js"></script>
 <script src="js/blocks.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/toolbox.js"></script>
@@ -73,5 +83,6 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 <script src="js/refactor.js"></script>
 <script src="js/project.js"></script>
 <script src="js/templates.js"></script>
+<script src="js/learn.js"></script>
 </body>
 </html>
