@@ -51,6 +51,7 @@ async function langTests(browser, base, lang) {
   console.log(`\n[${lang}] 基本`);
   const p = await open(browser, base, lang);
 
+  check('バージョンが表示される', await p.evaluate(() => /^\d+\.\d+\.\d+$/.test(APP_VERSION) && document.getElementById('appVersion').textContent === 'v' + APP_VERSION));
   check('起動時にエラーがない', !p.errors.length, p.errors.join(' / '));
   check('外部への通信がない (オフラインで動く)', !p.external.length, p.external.join(' / '));
 
@@ -185,6 +186,9 @@ async function featureTests(browser, base) {
   check('編集を終わると C# 編集画面とブロックのカバーが消える', (await shown()).every(x => !x));
 
   // ⑥ PWA
+  await p.click('#settingsBtn');
+  check('設定画面にバージョンが出る', await p.evaluate(() => document.getElementById('settingsBody').innerText.includes('v' + APP_VERSION)));
+  await p.click('#settingsClose');
   check('manifest がある (アプリとしてインストール)', await p.evaluate(async () => !!document.querySelector('link[rel=manifest]') && (await (await fetch('manifest.webmanifest')).json()).icons.length > 0));
 
   check('テスト中にエラーがない', !p.errors.length, p.errors.join(' / '));

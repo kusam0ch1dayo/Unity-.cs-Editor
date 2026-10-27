@@ -135,8 +135,14 @@ function renderSettings() {
         + '</div>';
     }).join('')).join('')
     + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`
-    + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '');
+    + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '')
+    + `<section><h3>${pick(['このアプリについて', 'About'])}</h3>`
+    + `<div class="set-row"><span>${pick(['バージョン', 'Version'])}</span><b>v${APP_VERSION}</b></div>`
+    + `<div class="set-row"><span>${pick(['開き方', 'Running as'])}</span><span>${matchMedia('(display-mode: standalone)').matches ? pick(['インストールしたアプリ', 'Installed app'])
+      : location.protocol === 'file:' ? pick(['パソコン内のファイル', 'Local file']) : pick(['ブラウザ', 'Browser'])}</span></div>`
+    + `<div class="set-row"><span>${pick(['更新内容', 'Release notes'])}</span><a href="https://github.com/kusam0ch1dayo/Unity-.cs-Editor/releases" target="_blank" rel="noopener">GitHub Releases</a></div></section>`;
 }
+document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 document.getElementById('settingsBody').onchange = async e => {
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   const t = e.target, set = t.dataset.set, sc = t.dataset.sc;

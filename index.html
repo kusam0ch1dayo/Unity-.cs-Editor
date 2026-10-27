@@ -20,7 +20,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 </head>
 <body>
 <header>
-  <h1>Unity Block Coder <small style="font-weight:400;opacity:.6">ブロック → C#</small></h1>
+  <h1>Unity Block Coder <small style="font-weight:400;opacity:.6">ブロック → C#</small> <span id="appVersion"></span></h1>
   <input id="search" type="search" placeholder="🔍 ブロック検索 (Ctrl+K)" autocomplete="off">
   <div id="shortcuts"></div>
   <nav id="menus"></nav>
@@ -73,6 +73,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
     <div id="importLog" hidden><div id="collectBar" hidden></div><div id="logBody"><div class="ok"><small>C# を読み込むと、ブロック化できなかった箇所と足りないブロックがここに表示されます</small></div></div></div>
   </div>
 </main>
+<script src="js/version.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/help-data.js"></script>
 <script src="js/blocks.js"></script>

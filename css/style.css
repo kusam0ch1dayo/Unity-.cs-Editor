@@ -11,6 +11,7 @@ html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--fg); font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif; display: flex; flex-direction: column; }
 header { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
 header h1 { font-size: 16px; margin: 0 auto 0 0; }
+#appVersion { font-size: 11px; font-weight: 400; opacity: .55; }
 button { font: inherit; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
 button:disabled { opacity: .4; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }

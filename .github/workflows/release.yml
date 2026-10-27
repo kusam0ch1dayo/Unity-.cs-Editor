@@ -25,6 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      - name: Check version
+        run: |
+          version=$(sed -n "s/^const APP_VERSION = '\(.*\)';/\1/p" js/version.js)
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::タグ名 ($TAG) と js/version.js のバージョン (v$version) が違います。js/version.js を書き換えてプッシュしてから実行してください。"
+            exit 1
+          fi
+
       - name: Build zip
         run: |
           name="Unity-Block-Coder-${TAG}"
