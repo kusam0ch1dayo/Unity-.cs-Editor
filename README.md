@@ -105,6 +105,7 @@ npm test
 - 不具合の報告やブロック追加の依頼は [Issues](https://github.com/kusam0ch1dayo/Unity-.cs-Editor/issues/new/choose) から
 - 脆弱性は公開せずに [SECURITY.md](SECURITY.md) の方法で
 - 変更の送り方は [CONTRIBUTING.md](CONTRIBUTING.md)
+- 更新・リリースの手順は [docs/maintenance.md](docs/maintenance.md)
 
 ## 使用ライブラリ
 
