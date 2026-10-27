@@ -171,7 +171,10 @@ async function featureTests(browser, base) {
   check('マイブロックが保存される', await p.evaluate(() => JSON.parse(localStorage.getItem(SNIPPET_KEY)).some(s => s.name === 'テスト')));
 
   // ⑦ C# を直接編集
+  const shown = () => p.evaluate(() => ['csEditor', 'edBar', 'editLock'].map(id => getComputedStyle(document.getElementById(id)).display !== 'none'));
+  check('編集していないときは C# 編集画面とブロックのカバーが見えない', (await shown()).every(x => !x));
   await p.evaluate(() => setEditMode(true));
+  check('編集中は C# 編集画面とブロックのカバーが見える', (await shown()).every(x => x));
   await p.evaluate(() => { const t = document.querySelector('#csEditor textarea'); t.value = t.value.replace(/(void Start\(\)\s*\{)/, '$1\n        int lives = 3;'); checkEditor(); });
   check('編集中は「ブロックに反映」が押せる', await p.evaluate(() => !document.querySelector('#edBar [data-ed="apply"]').disabled));
   await p.evaluate(() => applyEditor());
@@ -179,6 +182,7 @@ async function featureTests(browser, base) {
   await p.evaluate(() => { const t = document.querySelector('#csEditor textarea'); t.value = t.value.replace('int lives = 3;', 'int lives = ;'); checkEditor(); });
   check('構文エラーがある間は反映できない', await p.evaluate(() => document.querySelector('#edBar [data-ed="apply"]').disabled && document.querySelectorAll('#csEditor .ln.err').length === 1));
   await p.evaluate(() => setEditMode(false));
+  check('編集を終わると C# 編集画面とブロックのカバーが消える', (await shown()).every(x => !x));
 
   // ⑥ PWA
   check('manifest がある (アプリとしてインストール)', await p.evaluate(async () => !!document.querySelector('link[rel=manifest]') && (await (await fetch('manifest.webmanifest')).json()).icons.length > 0));
