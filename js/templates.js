@@ -300,6 +300,7 @@ document.getElementById('tplList').onclick = async e => {
   document.getElementById('tplMsg').textContent = '';
   newTab({});
   importCs(tr(t.code), false);
+  if (typeof adaptUnityVersion === 'function') adaptUnityVersion(true);
   ws.clearUndo();
   tplDlg.close();
   showToast(tr('テンプレート「{0}」を新しいタブで開きました', tr(t.name)));

@@ -122,8 +122,11 @@ window.addEventListener('resize', () => Blockly.svgResize(ws));
 // C# 読込ダイアログ
 const dlg = document.getElementById('importDlg'), msg = document.getElementById('importMsg'), toast = document.getElementById('toast');
 let toastTimer;
-function showToast(text, ms = 8000) {
+// actions: トーストに並べるボタン [{ label, run }]
+function showToast(text, ms = 8000, actions = []) {
   toast.textContent = text; toast.hidden = false;
+  if (actions.length) toast.append(Object.assign(document.createElement('div'), { className: 'toast-actions' }));
+  for (const a of actions) toast.lastChild.append(Object.assign(document.createElement('button'), { textContent: a.label, onclick: () => { toast.hidden = true; a.run(); } }));
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.hidden = true, ms);
 }
@@ -273,4 +276,3 @@ function renderLog(r) {
 }
 
 // オフライン対応 (http(s) で開いたときだけ。file:// ではサービスワーカーは使えない)
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

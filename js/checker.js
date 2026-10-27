@@ -35,8 +35,8 @@ function undefinedFixes(b, path, field, sc) {
   return fixes;
 }
 // クラスにメンバーを追加 (first: 先頭に / それ以外: 末尾に)
-function addMember(cls, json, first) {
-  const nb = Blockly.serialization.blocks.append(json, ws), input = cls.getInput('MEMBERS').connection;
+function addMember(cls, json, first, block) {
+  const nb = block || Blockly.serialization.blocks.append(json, ws, { recordUndo: true }), input = cls.getInput('MEMBERS').connection;
   let last = input.targetBlock();
   if (first || !last) nb.previousConnection.connect(input);
   else { while (last.getNextBlock()) last = last.getNextBlock(); nb.previousConnection.connect(last.nextConnection); }
@@ -341,6 +341,7 @@ function check() {
       if ((lastWarn.get(b.id) || '') !== t) { b.setWarningText(t || null); lastWarn.set(b.id, t); }
     }
   } finally { Blockly.Events.enable(); }
+  if (typeof unityVersionIssues === 'function') out.push(...unityVersionIssues());
   return out.filter((x, i) => out.findIndex(y => y.block === x.block && y.msg === x.msg) === i);
 }
 

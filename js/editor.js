@@ -24,6 +24,7 @@ function checkEditor() {
   edBar.innerHTML = `<span>${edErrors.length ? `✖ ${esc(tr(edErrors[0].msg))} (${tr('行 {0}', edErrors[0].line)})${edErrors.length > 1 ? ` +${edErrors.length - 1}` : ''}`
       : changed ? pick(['✎ 編集中 — 「ブロックに反映」で更新します', '✎ Editing — "Apply to blocks" updates the blocks']) : pick(['✔ ブロックと同じ内容です', '✔ Same as the blocks'])}</span>`
     + `<button data-ed="apply" class="primary" ${edErrors.length || !changed ? 'disabled' : ''} title="Ctrl+Enter">${pick(['ブロックに反映', 'Apply to blocks'])}</button>`
+    + `<button data-ed="diff" ${changed ? '' : 'disabled'}>${pick(['変更点', 'Changes'])}</button>`
     + `<button data-ed="close">${pick(['編集を終わる', 'Finish editing'])}</button>`;
   edBar.className = edErrors.length ? 'bad' : '';
   paintEditor();
@@ -68,6 +69,7 @@ edBar.onclick = e => {
   const act = e.target.closest('[data-ed]')?.dataset.ed;
   if (act === 'apply') applyEditor();
   if (act === 'close') setEditMode(false);
+  if (act === 'diff') showDiff(editor.base, edText.value, [pick(['ブロックの C#', 'C# from blocks']), pick(['編集中の C#', 'Edited C#'])]);
 };
 edText.addEventListener('input', () => { paintEditor(); clearTimeout(edTimer); edTimer = setTimeout(checkEditor, 250); });
 edText.addEventListener('scroll', () => { edHl.scrollTop = edText.scrollTop; edHl.scrollLeft = edText.scrollLeft; });

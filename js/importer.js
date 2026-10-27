@@ -618,8 +618,10 @@ function importCs(src, append) {
   Blockly.Events.setGroup(true);
   try {
     if (!append) ws.clear();
-    for (const t of tops) Blockly.serialization.blocks.append(t, ws);
-    ws.cleanUp();
+    for (const t of tops) Blockly.serialization.blocks.append(t, ws, { recordUndo: true });
+    // 縦に並べる (ws.cleanUp() は別の取り消しの単位になってしまうため、同じ単位の中で並べる)
+    let y = 0;
+    for (const b of ws.getTopBlocks(true)) { const xy = b.getRelativeToSurfaceXY(); b.moveBy(-xy.x, y - xy.y); y += b.getHeightWidth().height + 24; }
   } finally { Blockly.Events.setGroup(false); }
   return { count: ws.getAllBlocks(false).length - (append ? before : 0), log: Imp.log, notes: [...Imp.notes] };
 }

@@ -20,7 +20,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 </head>
 <body>
 <header>
-  <h1>Unity Block Coder <small style="font-weight:400;opacity:.6">ブロック → C#</small> <span id="appVersion"></span></h1>
+  <h1><img src="icons/icon-192.png" alt="">Unity Block Coder <small>ブロック → C#</small> <span id="appVersion"></span></h1>
   <input id="search" type="search" placeholder="🔍 ブロック検索 (Ctrl+K)" autocomplete="off">
   <div id="shortcuts"></div>
   <nav id="menus"></nav>
@@ -81,6 +81,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 <script src="js/toolbox.js"></script>
 <script src="js/types.js"></script>
 <script src="js/checker.js"></script>
+<script src="js/unityver.js"></script>
 <script src="js/autocomplete.js"></script>
 <script src="js/importer.js"></script>
 <script src="js/packs/ai-navigation.js"></script>
@@ -97,6 +98,9 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 <script src="js/snippets.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/editor.js"></script>
+<script src="js/diff.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/paste.js"></script>
 <script src="js/menu.js"></script>
 </body>
 </html>

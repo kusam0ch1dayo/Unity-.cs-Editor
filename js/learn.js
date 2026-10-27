@@ -55,7 +55,7 @@ document.getElementById('help').onclick = e => { if (e.target.closest('[data-act
 // ---------- Unity のヒント (よくある落とし穴) ----------
 let hints = [];
 function unityHints() {
-  const out = [], push = (block, text) => out.push({ block, text: pick(text) });
+  const out = [], push = (block, text, fix) => out.push({ block, text: pick(text), fix });
   const eventOf = b => { for (let p = b.getSurroundParent(); p; p = p.getSurroundParent()) if (p.type === 'unity_event') return f(p, 'EVENT').split('(')[0]; return null; };
   const usesDelta = b => b.getDescendants(false).some(d => (d.type === 'time_value' && /deltaTime/.test(f(d, 'PROP'))) || (d.type === 'var_get' && /deltaTime/.test(f(d, 'NAME'))));
   for (const b of ws.getAllBlocks(true)) {
@@ -64,9 +64,9 @@ function unityHints() {
     if (ev === 'Update' && b.type === 'transform_action' && f(b, 'ACTION') !== 'LookAt' && !usesDelta(b))
       push(b, ['Update の中の移動・回転に Time.deltaTime を掛けると、パソコンの速さ (フレームレート) に関係なく同じ速さで動きます。',
         'Multiply movement/rotation in Update by Time.deltaTime so the speed is the same at any frame rate.']);
-    if (ev === 'Update' && (b.type === 'get_component' || (b.type === 'generic_call' && /^GetComponent/.test(f(b, 'NAME'))) || b.type === 'find_object'))
+    if (['Update', 'FixedUpdate', 'LateUpdate'].includes(ev) && (b.type === 'get_component' || (b.type === 'generic_call' && /^GetComponent/.test(f(b, 'NAME'))) || b.type === 'find_object'))
       push(b, ['GetComponent や Find は重いので、毎フレーム (Update) ではなく Start で 1 回だけ呼び、変数に入れておきましょう。',
-        'GetComponent and Find are slow. Call them once in Start and keep the result in a variable instead of every frame.']);
+        'GetComponent and Find are slow. Call them once in Start and keep the result in a variable instead of every frame.'], ['get_component', 'find_object'].includes(b.type) && (() => cacheInStart(b)));
     if (ev === 'Update' && b.type === 'debug_log')
       push(b, ['Update の中の Debug.Log は毎フレーム表示されるので、Console が大量のメッセージで埋まります。', 'Debug.Log in Update prints every frame and floods the Console.']);
     if (ev === 'FixedUpdate' && ((b.type === 'input_key' && f(b, 'MODE') !== 'GetKey') || (b.type === 'input_button' && f(b, 'MODE') !== 'GetButton')
@@ -92,14 +92,60 @@ function unityHints() {
   }
   return out;
 }
+// Update などで毎回呼んでいる GetComponent / Find を、Start で 1 回だけ呼んでフィールドに入れるように書き換える
+function cacheInStart(b) {
+  let cls = b; while (cls && cls.type !== 'class_def') cls = cls.getSurroundParent();
+  if (!cls) return;
+  const members = []; for (let m = cls.getInputTargetBlock('MEMBERS'); m; m = m.getNextBlock()) members.push(m);
+  const isGet = b.type === 'get_component', type = isGet ? f(b, 'TYPE').trim() : 'GameObject';
+  // MonoBehaviour が元から持つ名前 (rigidbody, collider など) と重ならない名前にする
+  const SHORT = { Rigidbody: 'rb', Rigidbody2D: 'rb2d', Collider: 'col', Collider2D: 'col2d', Renderer: 'rend', Camera: 'cam', Light: 'lightSource', Animation: 'anim', Transform: 'targetTransform' };
+  const base = isGet ? SHORT[type] || type.charAt(0).toLowerCase() + type.slice(1) : (f(b, 'NAME').replace(/\W+(\w)/g, (m, c) => c.toUpperCase()).replace(/^\W+|\W+$/g, '').replace(/^./, c => c.toLowerCase()) || 'target') + 'Object';
+  const used = new Set([...members.map(m => m.getField('NAME') && f(m, 'NAME')), ...Object.keys(MONO).filter(k => !k.endsWith('()')), 'gameObject', 'transform', 'name', 'tag', 'enabled']);
+  let name = /^[A-Za-z_]\w*$/.test(base) ? base : 'cached', n = 2;
+  while (used.has(name)) name = base + n++;
+  const same = x => x.type === b.type && x.inputList.flatMap(i => i.fieldRow).every(fd => !fd.name || x.getFieldValue(fd.name) === b.getFieldValue(fd.name));
+  const json = Blockly.serialization.blocks.save(b, { addCoordinates: false, saveIds: false });
+  Blockly.Events.setGroup(true);
+  try {
+    // 同じ呼び出しを、Update などの中ではすべて変数に置き換える
+    for (const x of ws.getAllBlocks(false).filter(same)) {
+      let ev = null; for (let p = x.getSurroundParent(); p; p = p.getSurroundParent()) if (p.type === 'unity_event') { ev = f(p, 'EVENT'); break; }
+      if (!/^(Update|FixedUpdate|LateUpdate)\(/.test(ev || '')) continue;
+      const conn = x.outputConnection.targetConnection;
+      x.dispose(false);
+      const g = Blockly.serialization.blocks.append({ type: 'var_get', fields: { NAME: name } }, ws, { recordUndo: true });
+      if (conn) conn.connect(g.outputConnection);
+    }
+    addMember(cls, { type: 'field_def', fields: { ACCESS: 'private', TYPE: type, NAME: name } }, true);
+    let start = members.find(m => m.type === 'unity_event' && /^(Awake|Start)\(/.test(f(m, 'EVENT')));
+    if (!start) {   // Start を、最初のメソッドや Unity イベントの前に作る
+      start = Blockly.serialization.blocks.append({ type: 'unity_event', fields: { EVENT: 'Start()' } }, ws, { recordUndo: true });
+      const all = []; for (let m = cls.getInputTargetBlock('MEMBERS'); m; m = m.getNextBlock()) all.push(m);
+      const before = all.find(m => ['unity_event', 'method_def', 'coroutine_def', 'constructor_def'].includes(m.type)), prev = before && before.getPreviousBlock();
+      if (!before) addMember(cls, null, false, start);
+      else { (prev ? prev.nextConnection : cls.getInput('MEMBERS').connection).connect(start.previousConnection); start.nextConnection.connect(before.previousConnection); }
+    }
+    const set = Blockly.serialization.blocks.append({ type: 'var_set', fields: { NAME: name }, inputs: { VALUE: { block: json } } }, ws, { recordUndo: true });
+    const body = start.getInput('BODY').connection, first = body.targetBlock();
+    body.connect(set.previousConnection);
+    if (first) set.nextConnection.connect(first.previousConnection);
+    Blockly.common.setSelected(set);
+  } finally { Blockly.Events.setGroup(false); }
+  showToast(pick([`Start で 1 回だけ取得して、フィールド「${name}」に入れるように書き換えました (取り消しで元に戻せます)`,
+    `Now fetched once in Start and kept in the field "${name}" (Undo to revert)`]), 4000);
+}
 function renderHints() {
   hints = unityHints();
   document.getElementById('tabHints').textContent = pick(['ヒント', 'Hints']) + (hints.length ? ` (${hints.length})` : '');
   document.getElementById('hints').innerHTML = hints.length
-    ? hints.map((x, i) => `<div class="issue hint" data-i="${i}"><b>💡</b> ${esc(x.text)}<small>${esc(x.block.toString(28))}</small></div>`).join('')
+    ? hints.map((x, i) => `<div class="issue hint" data-i="${i}"><b>💡</b> ${esc(x.text)}<small>${esc(x.block.toString(28))}</small>`
+      + (x.fix ? `<button class="fix" data-fix="${i}">${pick(['Start で 1 回だけ取得する', 'Fetch once in Start'])}</button>` : '') + '</div>').join('')
     : `<div class="ok">${pick(['✔ 気になる点はありません', '✔ Nothing to point out'])}</div>`;
 }
 document.getElementById('hints').onclick = e => {
+  const fx = e.target.closest('[data-fix]');
+  if (fx) { hints[+fx.dataset.fix].fix(); return; }
   const d = e.target.closest('.hint'); if (!d) return;
   const b = hints[+d.dataset.i].block;
   ws.centerOnBlock(b.id); Blockly.common.setSelected(b);
@@ -124,7 +170,8 @@ function setBeginner(on) {
 function refreshToolbox() {
   const base = beginner ? toolbox.contents.map(c => ({ ...c, contents: c.contents.filter(it => BASIC.has(it.type)) })).filter(c => c.contents.length) : toolbox.contents;
   const extra = typeof snippetCategory === 'function' ? snippetCategory() : null;
-  activeToolbox = { kind: 'categoryToolbox', contents: extra ? [...base, extra] : base };
+  const adapted = typeof adaptToolboxJson === 'function' ? adaptToolboxJson(base) : base;
+  activeToolbox = { kind: 'categoryToolbox', contents: extra ? [...adapted, extra] : adapted };
   ws.updateToolbox(activeToolbox);
   searchIndex = null;
 }

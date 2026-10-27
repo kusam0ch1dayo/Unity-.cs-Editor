@@ -77,19 +77,91 @@ function newTab(state) {
   project.active = project.files.length - 1;
   loadActive();
 }
+// 閉じたタブ (開き直せるように、最近の 10 個を覚えておく)
+const closedTabs = [];
 function closeTab(i) {
-  if (!confirm(tr('「{0}」を閉じますか？ (タブを閉じる操作は元に戻せません)', project.files[i].name))) return;
+  if (i === project.active) saveProject();
+  closedTabs.push({ name: project.files[i].name, state: project.files[i].state, at: i });
+  if (closedTabs.length > 10) closedTabs.shift();
+  showToast(pick([`「${project.files[i].name}」を閉じました`, `Closed "${project.files[i].name}"`]), 5000, [{ label: pick(['元に戻す (Alt+Shift+T)', 'Reopen (Alt+Shift+T)']), run: reopenTab }]);
   if (project.files.length === 1) { project.files[0] = { name: 'NewScript.cs', state: newScriptState('NewScript') }; loadActive(); return; }
   project.files.splice(i, 1);
   if (i < project.active) project.active--;
   else if (i === project.active) { project.active = Math.min(i, project.files.length - 1); loadActive(); return; }
   saveProject();
 }
+function reopenTab() {
+  const t = closedTabs.pop();
+  if (!t) { showToast(pick(['開き直せるタブはありません', 'No closed tabs to reopen']), 2500); return; }
+  saveProject();
+  project.files.splice(Math.min(t.at, project.files.length), 0, { name: t.name, state: t.state });
+  project.active = Math.min(t.at, project.files.length - 1);
+  loadActive();
+}
+// タブの複製 (クラス名に Copy を付けて、ファイル名が重ならないようにする)
+function duplicateTab(i = project.active) {
+  saveProject();
+  const state = JSON.parse(JSON.stringify(project.files[i].state)), names = new Set(project.files.map(fl => fl.name.replace(/\.cs$/, '')));
+  const main = (state.blocks?.blocks || []).find(b => b.type === 'class_def' && b.fields?.BASE === 'MonoBehaviour') || (state.blocks?.blocks || []).find(b => b.type === 'class_def');
+  if (main) { let n = 2, name = main.fields.NAME + 'Copy'; while (names.has(name)) name = main.fields.NAME + 'Copy' + n++; main.fields.NAME = name; }
+  project.files.splice(i + 1, 0, { name: (main ? main.fields.NAME : 'Copy') + '.cs', state });
+  project.active = i + 1;
+  loadActive();
+}
+function moveTab(from, to) {
+  if (from === to || to < 0 || to >= project.files.length) return;
+  saveProject();
+  const activeFile = project.files[project.active];
+  project.files.splice(to, 0, project.files.splice(from, 1)[0]);
+  project.active = project.files.indexOf(activeFile);
+  saveProject();
+}
 function renderTabs() {
   document.getElementById('tabs').innerHTML = project.files.map((fl, i) =>
-    `<div class="tab${i === project.active ? ' on' : ''}" data-i="${i}" title="${esc(fl.name)}"><span>${esc(fl.name)}</span><button class="x" data-x="${i}" title="${tr('閉じる')}">×</button></div>`).join('')
+    `<div class="tab${i === project.active ? ' on' : ''}" data-i="${i}" draggable="true" title="${esc(fl.name)}"><span>${esc(fl.name)}</span><button class="x" data-x="${i}" title="${tr('閉じる')}">×</button></div>`).join('')
     + `<button id="newTab" title="${tr('新しいスクリプト')}">＋</button>`;
 }
+// ドラッグで並べ替え
+let dragTab = null;
+const tabsEl = document.getElementById('tabs');
+tabsEl.addEventListener('dragstart', e => { const t = e.target.closest('.tab'); if (!t) return; dragTab = +t.dataset.i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
+tabsEl.addEventListener('dragover', e => {
+  if (dragTab === null) return;
+  e.preventDefault();
+  tabsEl.querySelectorAll('.tab').forEach(t => t.classList.remove('drop-before', 'drop-after'));
+  const t = e.target.closest('.tab'); if (!t) return;
+  const r = t.getBoundingClientRect();
+  t.classList.add(e.clientX < r.left + r.width / 2 ? 'drop-before' : 'drop-after');
+});
+tabsEl.addEventListener('drop', e => {
+  if (dragTab === null) return;
+  e.preventDefault();
+  const t = e.target.closest('.tab');
+  if (t) { const r = t.getBoundingClientRect(); let to = +t.dataset.i + (e.clientX < r.left + r.width / 2 ? 0 : 1); if (to > dragTab) to--; moveTab(dragTab, to); }
+  dragTab = null; renderTabs();
+});
+tabsEl.addEventListener('dragend', () => { dragTab = null; renderTabs(); });
+// 右クリックのメニュー
+tabsEl.addEventListener('contextmenu', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  e.preventDefault();
+  const i = +t.dataset.i, items = [
+    ['dup', '⧉', pick(['複製', 'Duplicate'])], ['left', '←', pick(['左へ移動', 'Move left']), i === 0], ['right', '→', pick(['右へ移動', 'Move right']), i === project.files.length - 1],
+    ['close', '×', pick(['閉じる', 'Close'])], ['reopen', '↺', pick(['閉じたタブを開き直す', 'Reopen closed tab']), !closedTabs.length, 'Alt+Shift+T']];
+  const menu = document.getElementById('tabMenu') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'tabMenu', className: 'menu-panel', hidden: true }));
+  menu.innerHTML = items.map(([id, ic, lb, off, kb]) => `<button data-tab="${id}" ${off ? 'disabled' : ''}><span class="ic">${ic}</span><span class="lb">${esc(lb)}</span><span class="kb">${kb || ''}</span></button>`).join('');
+  menu.hidden = false;
+  menu.style.left = Math.min(e.clientX, innerWidth - menu.offsetWidth - 8) + 'px'; menu.style.top = e.clientY + 'px';
+  menu.onclick = ev => {
+    const b = ev.target.closest('[data-tab]'); if (!b) return;
+    menu.hidden = true;
+    ({ dup: () => duplicateTab(i), left: () => moveTab(i, i - 1), right: () => moveTab(i, i + 1), close: () => closeTab(i), reopen: reopenTab })[b.dataset.tab]();
+    renderTabs();
+  };
+  const away = ev => { if (!menu.contains(ev.target)) { menu.hidden = true; document.removeEventListener('pointerdown', away, true); } };
+  document.addEventListener('pointerdown', away, true);
+});
+window.addEventListener('keydown', e => { if (e.altKey && e.shiftKey && e.code === 'KeyT') { e.preventDefault(); reopenTab(); } });
 document.getElementById('tabs').onclick = e => {
   if (e.target.id === 'newTab') return newTab();
   const x = e.target.closest('[data-x]');

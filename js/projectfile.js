@@ -102,7 +102,7 @@ function openHistory() {
     + `<p class="hint">${pick(['2 分ごとと、全消去・読み込みなどの前に自動で記録されます (最大 30 件)。', 'Saved every 2 minutes and before clearing, importing and similar actions (up to 30).'])}</p>`
     + `<div class="row"><button data-h="snap">📸 ${pick(['今の状態を記録', 'Save the current state'])}</button><button data-h="wipe">${pick(['履歴を消去', 'Clear history'])}</button></div>`
     + (snapshots.length ? snapshots.map((s, i) => `<div class="set-row"><span><b>${esc(s.tab)}</b> <small>${fmt(s.time)} · ${esc(s.label)} · ${s.blocks} ${tr('ブロック')}</small></span>`
-      + `<span class="row"><button data-h="restore" data-i="${i}">${pick(['このタブに戻す', 'Restore here'])}</button><button data-h="open" data-i="${i}">${pick(['新しいタブで開く', 'Open in new tab'])}</button></span></div>`).join('')
+      + `<span class="row"><button data-h="restore" data-i="${i}">${pick(['このタブに戻す', 'Restore here'])}</button><button data-h="diff" data-i="${i}">${pick(['今と比較', 'Compare'])}</button><button data-h="open" data-i="${i}">${pick(['新しいタブで開く', 'Open in new tab'])}</button></span></div>`).join('')
       : `<p>${pick(['まだ履歴はありません。', 'No history yet.'])}</p>`);
   if (!historyDlg.open) historyDlg.showModal();
 }
@@ -121,6 +121,7 @@ historyDlg.onclick = e => {
     return;
   }
   if (act === 'open') { newTab(JSON.parse(s.json)); historyDlg.close(); return; }
+  if (act === 'diff') { saveProject(); showDiff(stateCs(JSON.parse(s.json)), code, [`${s.tab} (${new Date(s.time).toLocaleString()})`, pick([`今の ${fileName}`, `Current ${fileName}`])]); return; }
   openHistory();
 };
 

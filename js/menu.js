@@ -3,6 +3,15 @@
 const SHORTCUT_KEY = 'unity-block-coder-shortcuts';
 const DEFAULT_SHORTCUTS = ['undo', 'redo', 'import', 'templates', 'learn'];
 const press = id => document.getElementById(id).click();
+// メソッドなど (中に文を入れるメンバー) をまとめて折りたたむ / すべて開く / 整列。1 回の取り消しで戻せる
+function collapseAll(on) {
+  Blockly.Events.setGroup(true);
+  try {
+    if (on) ws.getAllBlocks(false).filter(b => MEMBER_BLOCKS.includes(b.type) && b.inputList.some(i => i.type === Blockly.inputs.inputTypes.STATEMENT)).forEach(b => b.setCollapsed(true));
+    else ws.getAllBlocks(false).filter(b => b.isCollapsed()).forEach(b => b.setCollapsed(false));
+  } finally { Blockly.Events.setGroup(false); }
+}
+function tidyUp() { Blockly.Events.setGroup(true); try { ws.cleanUp(); } finally { Blockly.Events.setGroup(false); } ws.scrollCenter(); }
 const ACTIONS = [
   // 編集
   { id: 'undo', menu: 'edit', icon: '↶', label: ['取り消し', 'Undo'], key: 'Ctrl+Z', run: () => press('undo'), enabled: () => !document.getElementById('undo').disabled },
@@ -11,13 +20,21 @@ const ACTIONS = [
   { id: 'sample', menu: 'edit', icon: '🧪', label: ['サンプルを読み込む', 'Load sample'], run: () => press('sample') },
   { id: 'clear', menu: 'edit', icon: '🗑', label: ['全消去', 'Clear all'], run: () => press('clear') },
   { id: 'editCs', menu: 'edit', icon: '✏️', label: ['C# を直接編集', 'Edit C# directly'], run: () => setEditMode(!editor.on), checked: () => editor.on },
+  { id: 'collapseAll', menu: 'edit', icon: '⊟', label: ['メソッドをすべて折りたたむ', 'Collapse all methods'], run: () => collapseAll(true) },
+  { id: 'expandAll', menu: 'edit', icon: '⊞', label: ['すべて開く', 'Expand all'], run: () => collapseAll(false) },
+  { id: 'tidy', menu: 'edit', icon: '▤', label: ['ブロックを整列', 'Tidy up blocks'], run: () => tidyUp() },
   { id: 'snippets', menu: 'edit', icon: '⭐', label: ['マイブロック', 'My blocks'], run: () => openSnippets() },
   // ファイル
   { id: 'newTab', menu: 'file', icon: '＋', label: ['新しいスクリプト (タブ)', 'New script (tab)'], run: () => newTab() },
+  { id: 'duplicateTab', menu: 'file', icon: '⧉', label: ['このタブを複製', 'Duplicate this tab'], run: () => duplicateTab() },
+  { id: 'reopenTab', menu: 'file', icon: '↺', label: ['閉じたタブを開き直す', 'Reopen closed tab'], key: 'Alt+Shift+T', run: () => reopenTab(), enabled: () => closedTabs.length > 0 },
   { id: 'import', menu: 'file', icon: '📥', label: ['C# を読み込む', 'Import C#'], run: () => press('import') },
   { id: 'templates', menu: 'file', icon: '🧩', label: ['テンプレート', 'Templates'], run: () => press('templates') },
   { id: 'copy', menu: 'file', icon: '📋', label: ['C# をコピー', 'Copy C#'], run: () => press('copy') },
   { id: 'save', menu: 'file', icon: '💾', label: ['.cs を保存', 'Save .cs'], run: () => press('dl') },
+  { id: 'assetsSave', menu: 'file', icon: '🎮', label: ['Unity の Assets に保存', 'Save to Unity Assets'], key: 'Ctrl+S', run: () => saveToAssets() },
+  { id: 'assetsSaveAll', menu: 'file', icon: '🎮', label: ['全タブを Assets に保存', 'Save all tabs to Assets'], run: () => saveAllToAssets() },
+  { id: 'assetsFolder', menu: 'file', icon: '📂', label: ['Assets の保存先を選ぶ', 'Choose the Assets folder'], run: () => chooseAssetsFolder() },
   { id: 'zip', menu: 'file', icon: '🗜', label: ['全部を zip で保存', 'Save all as zip'], run: () => press('zip') },
   { id: 'openProject', menu: 'file', icon: '📂', label: ['プロジェクトを開く (.json)', 'Open project (.json)'], run: () => openProjectFile() },
   { id: 'saveProject', menu: 'file', icon: '🗂', label: ['プロジェクトを保存 (.json)', 'Save project (.json)'], run: () => saveProjectFile() },
@@ -33,6 +50,7 @@ const ACTIONS = [
   { id: 'theme', menu: 'settings', icon: '🌓', label: ['テーマを切り替え', 'Switch theme'], run: () => press('theme'), state: () => THEME_LABEL[themeMode] },
   { id: 'lang', menu: 'settings', icon: '🌐', label: ['日本語 / English', '日本語 / English'], run: () => setLang(window.LANG === 'en' ? 'ja' : 'en') },
   { id: 'memo', menu: 'settings', icon: '📝', label: ['メモを C# のコメントに出力', 'Write memos as C# comments'], run: () => setMemo(!cs.exportMemo), checked: () => !!cs.exportMemo },
+  { id: 'whatsNew', menu: 'settings', icon: '✨', label: ['新しくなった点', "What's new"], run: () => openWhatsNew() },
   { id: 'install', menu: 'settings', icon: '📲', label: ['アプリとしてインストール', 'Install as an app'], run: () => installApp() },
   { id: 'settings', menu: 'settings', icon: '⚙', label: ['設定を開く', 'Open settings'], run: () => openSettings() },
 ];
@@ -122,10 +140,13 @@ function renderSettings() {
   document.getElementById('settingsBody').innerHTML =
     `<section><h3>${pick(['表示', 'Display'])}</h3>`
     + `<label class="set-row"><span>${pick(['テーマ', 'Theme'])}</span><select data-set="theme">${opt('auto', themeMode, THEME_LABEL.auto)}${opt('light', themeMode, THEME_LABEL.light)}${opt('dark', themeMode, THEME_LABEL.dark)}</select></label>`
-    + `<label class="set-row"><span>${pick(['言語 / Language', 'Language / 言語'])}</span><select data-set="lang">${opt('ja', window.LANG === 'en' ? 'en' : 'ja', '日本語')}${opt('en', window.LANG === 'en' ? 'en' : 'ja', 'English')}</select></label></section>`
+    + `<label class="set-row"><span>${pick(['言語 / Language', 'Language / 言語'])}</span><select data-set="lang">${opt('ja', window.LANG === 'en' ? 'en' : 'ja', '日本語')}${opt('en', window.LANG === 'en' ? 'en' : 'ja', 'English')}</select></label>`
+    + (typeof displaySettings === 'function' ? displaySettings() : '') + '</section>'
     + `<section><h3>${pick(['エディター', 'Editor'])}</h3>`
     + `<label class="set-row"><span>🔰 ${pick(['かんたんモード (よく使うブロックだけ表示)', 'Beginner mode (show only common blocks)'])}</span><input type="checkbox" data-set="beginner" ${beginner ? 'checked' : ''}></label>`
-    + `<label class="set-row"><span>📝 ${pick(['メモを C# のコメントに出力', 'Write memos as C# comments'])}</span><input type="checkbox" data-set="memo" ${cs.exportMemo ? 'checked' : ''}></label></section>`
+    + `<label class="set-row"><span>📝 ${pick(['メモを C# のコメントに出力', 'Write memos as C# comments'])}</span><input type="checkbox" data-set="memo" ${cs.exportMemo ? 'checked' : ''}></label>`
+    + (typeof unityVerSettings === 'function' ? unityVerSettings() : '') + '</section>'
+    + (typeof assetsSettings === 'function' ? assetsSettings() : '')
     + `<section><h3>${pick(['ショートカット', 'Shortcuts'])}</h3><p class="hint">${pick(['チェックした項目がヘッダーに並び、ワンクリックで実行できます。↑↓ で並び順を変えられます。',
       'Checked items appear in the header for one-click access. Use ↑↓ to change the order.'])}</p>`
     + groups.map(g => `<div class="set-group">${g.icon} ${esc(pick(g.label))}</div>` + ACTIONS.filter(a => a.menu === g.id).map(a => {
@@ -150,12 +171,16 @@ document.getElementById('settingsBody').onchange = async e => {
   if (set === 'lang') return setLang(t.value);
   if (set === 'beginner' && t.checked !== beginner) press('beginner');
   if (set === 'memo') setMemo(t.checked);
+  if (set === 'unityVer') setUnityVer(t.value);
+  if (t.dataset.display) setDisplay(t.dataset.display, t.value);
   if (sc) { shortcuts = t.checked ? [...shortcuts, sc] : shortcuts.filter(x => x !== sc); saveShortcuts(); renderSettings(); }
   refreshShortcuts();
 };
 document.getElementById('settingsBody').onclick = async e => {
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   if (typeof handleSnippetSettings === 'function' && handleSnippetSettings(e)) return;
+  if (typeof handleAssetsSettings === 'function' && await handleAssetsSettings(e)) return;
+  if (e.target.closest('[data-set="adaptVer"]')) { settingsDlg.close(); adaptUnityVersion(); return; }
   const up = e.target.closest('[data-up]')?.dataset.up, down = e.target.closest('[data-down]')?.dataset.down;
   const move = (id, d) => { const i = shortcuts.indexOf(id), j = i + d; [shortcuts[i], shortcuts[j]] = [shortcuts[j], shortcuts[i]]; };
   if (up) move(up, -1);
