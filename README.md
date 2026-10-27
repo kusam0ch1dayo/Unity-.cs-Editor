@@ -3,6 +3,8 @@
 ブロックを組み合わせて、Unity 用の C# スクリプトを作れるブラウザアプリです。
 C# を読み込んでブロックに戻すこともできます。
 
+**▶ [ブラウザですぐに試す](https://kusam0ch1dayo.github.io/Unity-.cs-Editor/)** (インストール不要・アプリとしてインストールも可)
+
 ## 使い方
 
 `index.html` をブラウザで開くだけで動きます (インストール不要)。
@@ -97,6 +99,12 @@ npm test
 
 - 本物の C# コンパイラではありません。Unity API は主要なものだけ確認します
 - 読み込み時、namespace と、式の途中やクラスの外にあるコメントは省略されます
+
+## 協力・報告
+
+- 不具合の報告やブロック追加の依頼は [Issues](https://github.com/kusam0ch1dayo/Unity-.cs-Editor/issues/new/choose) から
+- 脆弱性は公開せずに [SECURITY.md](SECURITY.md) の方法で
+- 変更の送り方は [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 使用ライブラリ
 

@@ -1,0 +1,11 @@
+# 依存関係の更新を自動で提案する (プルリクエストが作られる)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: npm   # テスト用の Playwright だけ (アプリ本体は vendor/ に同梱)
+    directory: /
+    schedule:
+      interval: monthly

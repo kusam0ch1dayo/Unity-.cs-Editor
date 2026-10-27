@@ -1,0 +1,49 @@
+name: 不具合の報告 / Bug report
+description: 思ったとおりに動かないところを知らせる
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きたか / What happened
+      description: 起きたことと、本当はどうなってほしかったか
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順 / Steps to reproduce
+      placeholder: |
+        1. 「サンプル」を押す
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: 関係する C# (あれば) / Related C# (optional)
+      description: 右側に表示された C#、または読み込もうとした C#
+      render: csharp
+  - type: dropdown
+    id: where
+    attributes:
+      label: 開き方 / How you opened the app
+      options:
+        - 公開ページ (GitHub Pages)
+        - インストールしたアプリ (PWA)
+        - index.html を直接開いた (file://)
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: ブラウザと OS / Browser and OS
+      placeholder: 例 Chrome 130 / Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: そのほか / Anything else
+      description: スクリーンショットや、エラーの一覧に出たメッセージなど
