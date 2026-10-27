@@ -10,6 +10,8 @@ const ACTIONS = [
   { id: 'search', menu: 'edit', icon: '🔍', label: ['ブロック検索', 'Search blocks'], key: 'Ctrl+K', run: () => { searchInput.focus(); searchInput.select(); } },
   { id: 'sample', menu: 'edit', icon: '🧪', label: ['サンプルを読み込む', 'Load sample'], run: () => press('sample') },
   { id: 'clear', menu: 'edit', icon: '🗑', label: ['全消去', 'Clear all'], run: () => press('clear') },
+  { id: 'editCs', menu: 'edit', icon: '✏️', label: ['C# を直接編集', 'Edit C# directly'], run: () => setEditMode(!editor.on), checked: () => editor.on },
+  { id: 'snippets', menu: 'edit', icon: '⭐', label: ['マイブロック', 'My blocks'], run: () => openSnippets() },
   // ファイル
   { id: 'newTab', menu: 'file', icon: '＋', label: ['新しいスクリプト (タブ)', 'New script (tab)'], run: () => newTab() },
   { id: 'import', menu: 'file', icon: '📥', label: ['C# を読み込む', 'Import C#'], run: () => press('import') },
@@ -17,6 +19,10 @@ const ACTIONS = [
   { id: 'copy', menu: 'file', icon: '📋', label: ['C# をコピー', 'Copy C#'], run: () => press('copy') },
   { id: 'save', menu: 'file', icon: '💾', label: ['.cs を保存', 'Save .cs'], run: () => press('dl') },
   { id: 'zip', menu: 'file', icon: '🗜', label: ['全部を zip で保存', 'Save all as zip'], run: () => press('zip') },
+  { id: 'openProject', menu: 'file', icon: '📂', label: ['プロジェクトを開く (.json)', 'Open project (.json)'], run: () => openProjectFile() },
+  { id: 'saveProject', menu: 'file', icon: '🗂', label: ['プロジェクトを保存 (.json)', 'Save project (.json)'], run: () => saveProjectFile() },
+  { id: 'share', menu: 'file', icon: '🔗', label: ['共有リンクをコピー', 'Copy share link'], run: () => shareLink() },
+  { id: 'history', menu: 'file', icon: '🕘', label: ['編集履歴', 'History'], run: () => openHistory() },
   // 初心者
   { id: 'learn', menu: 'beginner', icon: '📚', label: ['チュートリアル (学ぶ)', 'Tutorials (Learn)'], run: () => openLearn() },
   { id: 'beginnerMode', menu: 'beginner', icon: '🔰', label: ['かんたんモード', 'Beginner mode'], run: () => press('beginner'), checked: () => beginner },
@@ -27,6 +33,7 @@ const ACTIONS = [
   { id: 'theme', menu: 'settings', icon: '🌓', label: ['テーマを切り替え', 'Switch theme'], run: () => press('theme'), state: () => THEME_LABEL[themeMode] },
   { id: 'lang', menu: 'settings', icon: '🌐', label: ['日本語 / English', '日本語 / English'], run: () => setLang(window.LANG === 'en' ? 'ja' : 'en') },
   { id: 'memo', menu: 'settings', icon: '📝', label: ['メモを C# のコメントに出力', 'Write memos as C# comments'], run: () => setMemo(!cs.exportMemo), checked: () => !!cs.exportMemo },
+  { id: 'install', menu: 'settings', icon: '📲', label: ['アプリとしてインストール', 'Install as an app'], run: () => installApp() },
   { id: 'settings', menu: 'settings', icon: '⚙', label: ['設定を開く', 'Open settings'], run: () => openSettings() },
 ];
 const MENUS = [

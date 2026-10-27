@@ -153,3 +153,21 @@ header h1 { flex: none; white-space: nowrap; }
 @media (max-width: 700px) { header h1 small { display: none; } }
 #shortcuts { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
 #shortcuts::-webkit-scrollbar { display: none; }
+
+/* C# の直接編集 */
+#csEditor { position: relative; flex: 1; min-height: 0; }
+#csEditor pre, #csEditor textarea { position: absolute; inset: 0; margin: 0; padding: 12px 16px; font: 13px/1.55 ui-monospace, Consolas, "Cascadia Code", monospace;
+  tab-size: 4; white-space: pre; overflow: auto; border: 0; }
+#csEditor pre { overflow: hidden; pointer-events: none; color: var(--code-fg); }
+#csEditor textarea { padding-left: calc(16px + 3.2em); background: transparent; color: transparent; caret-color: #fff; resize: none; outline: none; }
+#csEditor textarea::selection { background: rgba(107, 149, 234, .35); color: transparent; }
+#edBar { display: flex; gap: 6px; align-items: center; padding: 6px 8px; font-size: 12px; color: var(--code-fg); background: #23252b; }
+#edBar span { margin-right: auto; }
+#edBar.bad span { color: #ff8a8a; }
+#edBar button { font-size: 12px; padding: 3px 10px; }
+#editLock { position: absolute; inset: 0; z-index: 40; background: rgba(20, 22, 28, .45); display: flex; align-items: center; justify-content: center; }
+#editLock div { background: var(--panel); color: var(--fg); padding: 12px 16px; border-radius: 8px; font-size: 13px; max-width: 80%; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.filebtn { display: inline-block; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+#historyDlg { width: min(640px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+#historyDlg::backdrop { background: rgba(0,0,0,.45); }
+#historyDlg .set-row small { opacity: .7; }

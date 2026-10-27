@@ -363,11 +363,16 @@ const tsReady = (async () => {
 function syntaxErrors(src) {
   if (!tsParser) return [];
   const out = [], tree = tsParser.parse(src);
+  const err = (n, msg) => out.push({ line: n.startPosition.row + 1, level: 'error', msg });
   (function walk(n) {
     if (n.type === 'ERROR' || n.isMissing()) {
-      out.push({ line: n.startPosition.row + 1, level: 'error',
-        msg: n.isMissing() ? `構文エラー: '${n.type}' がありません` : `構文エラー: ${src.slice(n.startIndex, n.endIndex).split('\n')[0].trim().slice(0, 40)}` });
-    } else if (n.hasError()) for (let i = 0; i < n.childCount; i++) walk(n.child(i));
+      err(n, n.isMissing() ? `構文エラー: '${n.type}' がありません` : `構文エラー: ${src.slice(n.startIndex, n.endIndex).split('\n')[0].trim().slice(0, 40)}`);
+    } else if (n.hasError()) {
+      const before = out.length;
+      for (let i = 0; i < n.childCount; i++) walk(n.child(i));
+      // 隠れたトークンが足りない (例: 'x = ;' の右辺) ときは子に見つからないので、この場所を知らせる
+      if (out.length === before) { const t = src.slice(n.startIndex, n.endIndex).split('\n')[0].trim().slice(0, 40); err(n, t ? `構文エラー: ${t}` : `構文エラー: '${n.type}' がありません`); }
+    }
   })(tree.rootNode);
   tree.delete();
   return out;

@@ -4,7 +4,7 @@ const ws = Blockly.inject('blocks', {
   toolbox, renderer: 'zelos', comments: true, media: 'vendor/blockly/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
   zoom: { controls: true, wheel: false, startScale: 0.75 }, grid: { spacing: 24, length: 2, colour: '#ddd', snap: true },
 });
-const load = data => { Blockly.Events.setGroup(true); ws.clear(); Blockly.serialization.workspaces.load(data, ws); Blockly.Events.setGroup(false); };
+const load = data => { Blockly.Events.setGroup(true); ws.clear(); Blockly.serialization.workspaces.load(data, ws, { recordUndo: true }); Blockly.Events.setGroup(false); };
 
 const KW = new Set('using public private protected internal static class void int float bool string var new return if else for foreach in while break continue true false null this base default'.split(' '));
 const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -94,8 +94,9 @@ document.getElementById('memoOut').onchange = e => {
   update();
 };
 
-document.getElementById('sample').onclick = () => load(sample);
-document.getElementById('clear').onclick = () => { Blockly.Events.setGroup(true); ws.clear(); Blockly.Events.setGroup(false); };
+const snap = label => typeof takeSnapshot === 'function' && takeSnapshot(pick(label), true);
+document.getElementById('sample').onclick = () => { snap(['サンプル読込の前', 'Before loading the sample']); load(sample); };
+document.getElementById('clear').onclick = () => { snap(['全消去の前', 'Before clearing']); Blockly.Events.setGroup(true); ws.clear(); Blockly.Events.setGroup(false); };
 const history = redo => { AC.close(); Blockly.hideChaff(); ws.undo(redo); };
 document.getElementById('undo').onclick = () => history(false);
 document.getElementById('redo').onclick = () => history(true);
@@ -153,6 +154,7 @@ document.getElementById('importGo').onclick = async () => {
       }
     } else {
       if (toNewTab && !append) newTab({});
+      else if (!append) snap(['C# 読込の前', 'Before importing C#']);
       r = importCs(importSrc.value, append);
       if (toNewTab && !append) ws.clearUndo();
       collect(r, srcName);

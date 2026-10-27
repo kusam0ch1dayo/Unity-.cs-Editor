@@ -1,0 +1,478 @@
+{
+ "format": "unity-block-coder-project",
+ "version": 1,
+ "savedAt": "2026-10-27T19:43:11.760Z",
+ "active": 1,
+ "files": [
+  {
+   "name": "PlayerController.cs",
+   "state": {
+    "blocks": {
+     "languageVersion": 0,
+     "blocks": [
+      {
+       "type": "class_def",
+       "id": "iFwX{FP!0}3W]h3?l+}C",
+       "x": 20,
+       "y": 20,
+       "fields": {
+        "SER": true,
+        "ACCESS": "public",
+        "NAME": "Item",
+        "BASE": ""
+       },
+       "inputs": {
+        "MEMBERS": {
+         "block": {
+          "type": "field_def",
+          "id": "fB:O:qNVum`QjI?;e$Y=",
+          "fields": {
+           "ACCESS": "public",
+           "TYPE": "string",
+           "NAME": "itemName"
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "text",
+             "id": "r-EqqS4eBQ4HY^IEt[2q",
+             "fields": {
+              "TEXT": "Potion"
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "field_def",
+            "id": "u5/TGxvoDL[@hk,DWuWA",
+            "fields": {
+             "ACCESS": "public",
+             "TYPE": "int",
+             "NAME": "price"
+            },
+            "inputs": {
+             "VALUE": {
+              "block": {
+               "type": "math_number",
+               "id": "Y#0{lirNA?b{+vU0ZhEo",
+               "fields": {
+                "NUM": 100
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      },
+      {
+       "type": "class_def",
+       "id": "YpR8B?UyClGB|j.JzVaj",
+       "x": 20,
+       "y": 200,
+       "fields": {
+        "SER": false,
+        "ACCESS": "public",
+        "NAME": "PlayerController",
+        "BASE": "MonoBehaviour"
+       },
+       "inputs": {
+        "MEMBERS": {
+         "block": {
+          "type": "field_def",
+          "id": "Ci,_Y[*wxe0E]4]jij;c",
+          "fields": {
+           "ACCESS": "public",
+           "TYPE": "float",
+           "NAME": "speed"
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "math_number",
+             "id": "jGKHD.z#|1el!PuJgO-6",
+             "fields": {
+              "NUM": 5
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "field_def",
+            "id": "XbDk;aG}a$l!4^YyQvLd",
+            "fields": {
+             "ACCESS": "[SerializeField] private",
+             "TYPE": "List<Item>",
+             "NAME": "inventory"
+            },
+            "inputs": {
+             "VALUE": {
+              "block": {
+               "type": "list_new",
+               "id": "-m3nho]%ZuZf;Q2H78b.",
+               "fields": {
+                "TYPE": "Item"
+               }
+              }
+             }
+            },
+            "next": {
+             "block": {
+              "type": "unity_event",
+              "id": "0cr+~2gBj_54X6I~lfX7",
+              "fields": {
+               "EVENT": "Start()"
+              },
+              "inputs": {
+               "BODY": {
+                "block": {
+                 "type": "debug_log",
+                 "id": "ZXQu8/]*J:{W7N8*Hef7",
+                 "fields": {
+                  "LEVEL": "Log"
+                 },
+                 "inputs": {
+                  "MSG": {
+                   "block": {
+                    "type": "text",
+                    "id": "CN4a$,9;TU]a`Qz!jw!G",
+                    "fields": {
+                     "TEXT": "ゲーム開始"
+                    }
+                   }
+                  }
+                 },
+                 "next": {
+                  "block": {
+                   "type": "var_local",
+                   "id": "/L5(!!n{b`{`!%]n:0h%",
+                   "fields": {
+                    "TYPE": "Item",
+                    "NAME": "potion"
+                   },
+                   "inputs": {
+                    "VALUE": {
+                     "block": {
+                      "type": "new_object",
+                      "id": "(=91^#_)8gHt#%d!Fg$I",
+                      "fields": {
+                       "NAME": "Item",
+                       "ARGS": ""
+                      }
+                     }
+                    }
+                   },
+                   "next": {
+                    "block": {
+                     "type": "list_add",
+                     "id": "{.~2%eHi#RHhN.xxq,$i",
+                     "inputs": {
+                      "LIST": {
+                       "block": {
+                        "type": "var_get",
+                        "id": "1?1f]VI1Q`h|1/?*@VCk",
+                        "fields": {
+                         "NAME": "inventory"
+                        }
+                       }
+                      },
+                      "VALUE": {
+                       "block": {
+                        "type": "var_get",
+                        "id": "ndYgHl@Sz*pOqxbM`BR5",
+                        "fields": {
+                         "NAME": "potion"
+                        }
+                       }
+                      }
+                     },
+                     "next": {
+                      "block": {
+                       "type": "debug_log",
+                       "id": "Owc33T[R0},W^h#^_p}a",
+                       "fields": {
+                        "LEVEL": "Log"
+                       },
+                       "inputs": {
+                        "MSG": {
+                         "block": {
+                          "type": "text_concat",
+                          "id": "JbP(+4)4dsXYof7ZZCcZ",
+                          "inputs": {
+                           "A": {
+                            "block": {
+                             "type": "text",
+                             "id": "2_ZLMdR1_g{:ZY$`yJUQ",
+                             "fields": {
+                              "TEXT": "所持数: "
+                             }
+                            }
+                           },
+                           "B": {
+                            "block": {
+                             "type": "list_count",
+                             "id": "+)q}/TN6l@dl~lws:;M.",
+                             "inputs": {
+                              "LIST": {
+                               "block": {
+                                "type": "var_get",
+                                "id": "B[S@U6P.{bW]%LKmi.Qb",
+                                "fields": {
+                                 "NAME": "inventory"
+                                }
+                               }
+                              }
+                             }
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              "next": {
+               "block": {
+                "type": "unity_event",
+                "id": "+,J:`O;KM@CXbaJH-|Y]",
+                "fields": {
+                 "EVENT": "Update()"
+                },
+                "inputs": {
+                 "BODY": {
+                  "block": {
+                   "type": "var_local",
+                   "id": "/IGU`R9%}dc?5alSQ1AB",
+                   "fields": {
+                    "TYPE": "float",
+                    "NAME": "h"
+                   },
+                   "inputs": {
+                    "VALUE": {
+                     "block": {
+                      "type": "input_axis",
+                      "id": "3$,:`$iy[?3!v{fXs#r0",
+                      "fields": {
+                       "MODE": "GetAxis",
+                       "AXIS": "Horizontal"
+                      }
+                     }
+                    }
+                   },
+                   "next": {
+                    "block": {
+                     "type": "transform_action",
+                     "id": "zuU_e]:yhHH]^NkO}RWO",
+                     "fields": {
+                      "ACTION": "Translate"
+                     },
+                     "inputs": {
+                      "VEC": {
+                       "block": {
+                        "type": "vector3_new",
+                        "id": "$Oj$f+kT3O92j/|CL?Sd",
+                        "inputs": {
+                         "X": {
+                          "block": {
+                           "type": "math_arithmetic",
+                           "id": "TJjo#B?XdQSs1-w*zSgp",
+                           "fields": {
+                            "OP": "MULTIPLY"
+                           },
+                           "inputs": {
+                            "A": {
+                             "block": {
+                              "type": "math_arithmetic",
+                              "id": "ejg5GOE-=p+,Vwx[LV48",
+                              "fields": {
+                               "OP": "MULTIPLY"
+                              },
+                              "inputs": {
+                               "A": {
+                                "block": {
+                                 "type": "var_get",
+                                 "id": "F7Fa,hyK6]Qymbw%[:i7",
+                                 "fields": {
+                                  "NAME": "h"
+                                 }
+                                }
+                               },
+                               "B": {
+                                "block": {
+                                 "type": "var_get",
+                                 "id": "hE/YA;/aVohw9Nn6}nqy",
+                                 "fields": {
+                                  "NAME": "speed"
+                                 }
+                                }
+                               }
+                              }
+                             }
+                            },
+                            "B": {
+                             "block": {
+                              "type": "time_value",
+                              "id": "MX;m!t?@ZnM?td8g*6SG",
+                              "fields": {
+                               "PROP": "deltaTime"
+                              }
+                             }
+                            }
+                           }
+                          }
+                         },
+                         "Y": {
+                          "block": {
+                           "type": "math_number",
+                           "id": ",5_^P$)jQzIJ^.#;F=.|",
+                           "fields": {
+                            "NUM": 0
+                           }
+                          }
+                         },
+                         "Z": {
+                          "block": {
+                           "type": "math_number",
+                           "id": "gx$}gP,7[UrQCJ5%ERps",
+                           "fields": {
+                            "NUM": 0
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     },
+                     "next": {
+                      "block": {
+                       "type": "controls_if",
+                       "id": "Pf*Z60zSb~K!YeqIly.i",
+                       "inputs": {
+                        "IF0": {
+                         "block": {
+                          "type": "input_key",
+                          "id": "!cT`!XisPf|Ot1tdv^qG",
+                          "fields": {
+                           "MODE": "GetKeyDown",
+                           "KEY": "Space"
+                          }
+                         }
+                        },
+                        "DO0": {
+                         "block": {
+                          "type": "list_foreach",
+                          "id": "If[N2]a?n#P{kfA_][|y",
+                          "fields": {
+                           "TYPE": "Item",
+                           "VAR": "item"
+                          },
+                          "inputs": {
+                           "LIST": {
+                            "block": {
+                             "type": "var_get",
+                             "id": "S6.,V){O+Gubn7-mtG]h",
+                             "fields": {
+                              "NAME": "inventory"
+                             }
+                            }
+                           },
+                           "DO": {
+                            "block": {
+                             "type": "debug_log",
+                             "id": "Tn$iy2wx2_F;23xOt90%",
+                             "fields": {
+                              "LEVEL": "Log"
+                             },
+                             "inputs": {
+                              "MSG": {
+                               "block": {
+                                "type": "var_get",
+                                "id": "5T{#FE^}Y3WO^I^|6WhX",
+                                "fields": {
+                                 "NAME": "item.itemName"
+                                }
+                               }
+                              }
+                             }
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "NewScript.cs",
+   "state": {
+    "blocks": {
+     "languageVersion": 0,
+     "blocks": [
+      {
+       "type": "class_def",
+       "id": "mij-AyZgXem{Q2P@$mTo",
+       "x": 20,
+       "y": 20,
+       "fields": {
+        "SER": false,
+        "ACCESS": "public",
+        "NAME": "NewScript",
+        "BASE": "MonoBehaviour"
+       },
+       "inputs": {
+        "MEMBERS": {
+         "block": {
+          "type": "unity_event",
+          "id": "WHLaHNpnpB9JWaH#5?RE",
+          "fields": {
+           "EVENT": "Start()"
+          },
+          "next": {
+           "block": {
+            "type": "unity_event",
+            "id": "(PZ2oG6@rx^i?)!J%PqO",
+            "fields": {
+             "EVENT": "Update()"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ ]
+}
