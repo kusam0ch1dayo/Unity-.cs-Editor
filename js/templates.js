@@ -51,14 +51,17 @@ public class PlayerController3D : MonoBehaviour
     }
 }
 ` },
-  { name: 'カメラ追従', desc: 'ターゲットをなめらかに追いかけるカメラ', code: `using UnityEngine;
+  { name: 'カメラ追従', desc: 'プレイヤーを左寄りに映して追いかけるカメラ (2D / 3D)', code: `using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
     public Transform target;
-    public Vector3 offset = new Vector3(0, 5, -10);
+    [Header("画面の中でのプレイヤーの位置 (x を + にすると左寄りに映る)")]
+    public Vector3 offset = new Vector3(3, 1, -10);
+    [Header("0 でぴったり追従。大きいほどなめらかだが、動いている間は少し遅れる")]
     [Range(0, 1)]
-    public float smooth = 0.1f;
+    public float smoothTime = 0.15f;
+    private Vector3 velocity;
 
     void LateUpdate()
     {
@@ -67,8 +70,14 @@ public class CameraFollow : MonoBehaviour
             return;
         }
         Vector3 goal = target.position + offset;
-        transform.position = Vector3.Lerp(transform.position, goal, smooth);
-        transform.LookAt(target);
+        if (smoothTime <= 0)
+        {
+            transform.position = goal;
+        }
+        else
+        {
+            transform.position = Vector3.SmoothDamp(transform.position, goal, ref velocity, smoothTime);
+        }
     }
 }
 ` },
