@@ -1,7 +1,13 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.8.0': [
+    ['ライトモードを明るく。C# の表示や下のパネルも明るい配色に', 'A brighter light mode, including the C# view and bottom panels'],
+    ['設定をタブ (一般 / テーマ / ショートカット / 拡張) に整理', 'Settings are now organized in tabs (General / Theme / Shortcuts / Extensions)'],
+    ['「テーマ」タブ: 明るさ・テーマカラー 8 色・コードの配色を選べます', 'Theme tab: choose the mode, one of 8 theme colors and the code colors'],
+    ['アクセント・背景・パネル・文字・コードの背景の色を自分で変えられます (ライト / ダーク別)', 'Pick your own accent, background, panel, text and code background colors (separately for light / dark)'],
+  ],
   '1.7.0': [
     ['Ctrl+S で Unity の Assets フォルダに直接保存 (Chrome / Edge)', 'Ctrl+S saves straight into your Unity Assets folder (Chrome / Edge)'],
     ['コピーした C# を Ctrl+V でブロックとして貼り付け。ブロックの Ctrl+C で C# もコピー', 'Paste C# as blocks with Ctrl+V. Ctrl+C on a block also copies its C#'],

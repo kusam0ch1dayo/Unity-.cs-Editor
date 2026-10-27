@@ -33,7 +33,7 @@ function update() {
   const nE = issues.filter(x => x.level === 'error').length, nW = issues.length - nE;
   const st = document.getElementById('status');
   st.textContent = nE || nW ? `✖ ${nE}  ⚠ ${nW}` : '✔ OK';
-  st.style.color = nE ? '#ff6b6b' : nW ? '#f5c04a' : '#7bd88f';
+  st.style.color = nE ? 'var(--code-err)' : nW ? 'var(--code-warn)' : 'var(--code-ok)';
   document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}" title="${esc(typeof explainError === 'function' ? explainError(x.msg) : '')}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(tr(x.msg))}`
       + `<small>${x.line ? tr('行 {0}', x.line) : esc(x.block.toString(28))}</small>`
       + (x.fixes || []).map((fx, j) => `<button class="fix" data-f="${i}:${j}" title="${tr('クリックで修正')}">${esc(tr(fx.label))}</button>`).join('') + '</div>').join('')
@@ -258,7 +258,7 @@ function renderLog(r) {
     + (sorted.length ? `<div class="log-sec">${tr('足りないブロック')}</div>` + sorted.map(([k, c]) => `<div class="log-need">■ ${esc(tr(k))}<small>×${c}</small></div>`).join('')
       : `<div class="ok">${tr('✔ すべて専用ブロックに変換できました')}</div>`)
     + (r.log.length ? `<div class="log-sec">${tr('詳細 (クリックでブロックへ移動)')}</div>` + r.log.map((e, i) =>
-      `<div class="issue" data-i="${i}"><b style="color:#f5c04a">${tr('行 {0}', e.line)}</b> ${esc(tr(e.need))} ${esc(tr('→ 「{0}」で代用', KIND[e.type]))}<code>${esc(e.code)}</code></div>`).join('') : '')
+      `<div class="issue" data-i="${i}"><b style="color:var(--code-warn)">${tr('行 {0}', e.line)}</b> ${esc(tr(e.need))} ${esc(tr('→ 「{0}」で代用', KIND[e.type]))}<code>${esc(e.code)}</code></div>`).join('') : '')
     + (r.notes.length ? `<div class="log-sec">${tr('その他')}</div>` + r.notes.map(n => `<div>ℹ ${esc(tr(n))}</div>`).join('') : '');
   box.onclick = async e => {
     if (e.target.id === 'copyLog') {

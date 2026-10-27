@@ -129,6 +129,7 @@ async function featureTests(browser, base) {
   fs.writeFileSync(packFile, JSON.stringify({ id: 'my-pack', name: 'テスト', blocks: [{ type: 'my_log_warn', label: 'warn {MSG}', code: 'Debug.LogWarning({MSG});', inputs: { MSG: { type: 'string', example: { text: 'hi' } } } }] }));
   fs.writeFileSync(badFile, JSON.stringify({ id: 'bad pack', blocks: [] }));
   await p.click('#settingsBtn');
+  await p.click('#settingsBody [data-stab="ext"]');
   await p.setInputFiles('#settingsBody [data-pack-file]', packFile); await p.waitForTimeout(300);
   check('拡張パックを読み込める', await p.evaluate(() => !!PACK_BLOCKS.my_log_warn && toolbox.contents.some(c => c.pack === 'my-pack')));
   await p.setInputFiles('#settingsBody [data-pack-file]', badFile); await p.waitForTimeout(300);
@@ -193,6 +194,7 @@ async function featureTests(browser, base) {
 
   // ⑥ PWA
   await p.click('#settingsBtn');
+  await p.click('#settingsBody [data-stab="general"]');
   check('設定画面にバージョンが出る', await p.evaluate(() => document.getElementById('settingsBody').innerText.includes('v' + APP_VERSION)));
   await p.click('#settingsClose');
   check('manifest がある (アプリとしてインストール)', await p.evaluate(async () => !!document.querySelector('link[rel=manifest]') && (await (await fetch('manifest.webmanifest')).json()).icons.length > 0));
@@ -314,6 +316,27 @@ async function qolTests(browser, base) {
 
   check('テスト中にエラーがない', !p.errors.length, p.errors.join(' / '));
   await p.context().close();
+
+  // テーマ
+  const p4 = await open(browser, base, 'ja', {}, { colorScheme: 'light' });
+  const css = v => p4.evaluate(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), v);
+  check('ライトではコードの表示も明るい', await p4.evaluate(() => document.documentElement.dataset.code === 'light' && getComputedStyle(document.getElementById('side')).backgroundColor === 'rgb(255, 255, 255)'));
+  await p4.evaluate(() => { openSettings(); settingsTab = 'theme'; renderSettings(); });
+  await p4.click('#settingsBody [data-theme-set="palette"][data-v="sakura"]');
+  check('テーマカラーを選ぶと画面の色が変わる', await css('--accent') === '#d6407f');
+  await p4.evaluate(() => { const i = document.querySelector('#settingsBody [data-color="bg"]'); i.value = '#fff8e1'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  check('背景の色を自分で選べる', await css('--bg') === '#fff8e1');
+  await p4.click('#settingsBody [data-theme-set="code"][data-v="dark"]');
+  check('コードの配色を暗くできる', await p4.evaluate(() => document.documentElement.dataset.code === 'dark'));
+  await p4.click('#settingsBody [data-theme-set="mode"][data-v="dark"]');
+  check('ダークにすると、ライト用に選んだ色は使われない', await css('--bg') === '#15161a' && await p4.evaluate(() => document.documentElement.classList.contains('ws-dark')));
+  await p4.reload(); await p4.waitForFunction(() => typeof tsParser !== 'undefined' && tsParser);
+  check('テーマの設定は次に開いたときも残る', await css('--accent') === '#f472b6' && await p4.evaluate(() => themeMode === 'dark'));
+  await p4.evaluate(() => { openSettings(); settingsTab = 'theme'; renderSettings(); });
+  await p4.click('#settingsBody [data-theme-set="resetAll"]');
+  check('テーマを初期設定に戻せる', await p4.evaluate(() => themeMode === 'auto' && colors.palette === 'blue' && !Object.keys(colors.custom.light).length));
+  check('テスト中にエラーがない (テーマ)', !p4.errors.length, p4.errors.join(' / '));
+  await p4.context().close();
 
   // キーボードでのコピー・貼り付け (本物のクリップボードを使う)
   const p3 = await open(browser, base, 'ja', {}, { permissions: ['clipboard-read', 'clipboard-write'] });

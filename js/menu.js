@@ -134,12 +134,15 @@ window.addEventListener('resize', closeMenu);
 const settingsDlg = document.getElementById('settingsDlg');
 function openSettings() { renderSettings(); settingsDlg.showModal(); }
 document.getElementById('settingsClose').onclick = () => settingsDlg.close();
+// 設定画面はタブで分ける (一般 / テーマ / ショートカット / 拡張)
+const SETTINGS_TABS = [['general', '⚙', ['一般', 'General']], ['theme', '🎨', ['テーマ', 'Theme']], ['shortcuts', '⭐', ['ショートカット', 'Shortcuts']], ['ext', '🧩', ['拡張', 'Extensions']]];
+let settingsTab = 'general';
 function renderSettings() {
   const opt = (v, cur, text) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${esc(text)}</option>`;
   const groups = [...MENUS, { id: 'settings', icon: '⚙', label: ['設定', 'Settings'] }];
-  document.getElementById('settingsBody').innerHTML =
+  const tabs = `<div class="set-tabs" role="tablist">${SETTINGS_TABS.map(([id, ic, lb]) => `<button role="tab" data-stab="${id}" class="${id === settingsTab ? 'on' : ''}" aria-selected="${id === settingsTab}">${ic} ${esc(pick(lb))}</button>`).join('')}</div>`;
+  const general = () =>
     `<section><h3>${pick(['表示', 'Display'])}</h3>`
-    + `<label class="set-row"><span>${pick(['テーマ', 'Theme'])}</span><select data-set="theme">${opt('auto', themeMode, THEME_LABEL.auto)}${opt('light', themeMode, THEME_LABEL.light)}${opt('dark', themeMode, THEME_LABEL.dark)}</select></label>`
     + `<label class="set-row"><span>${pick(['言語 / Language', 'Language / 言語'])}</span><select data-set="lang">${opt('ja', window.LANG === 'en' ? 'en' : 'ja', '日本語')}${opt('en', window.LANG === 'en' ? 'en' : 'ja', 'English')}</select></label>`
     + (typeof displaySettings === 'function' ? displaySettings() : '') + '</section>'
     + `<section><h3>${pick(['エディター', 'Editor'])}</h3>`
@@ -147,6 +150,12 @@ function renderSettings() {
     + `<label class="set-row"><span>📝 ${pick(['メモを C# のコメントに出力', 'Write memos as C# comments'])}</span><input type="checkbox" data-set="memo" ${cs.exportMemo ? 'checked' : ''}></label>`
     + (typeof unityVerSettings === 'function' ? unityVerSettings() : '') + '</section>'
     + (typeof assetsSettings === 'function' ? assetsSettings() : '')
+    + `<section><h3>${pick(['このアプリについて', 'About'])}</h3>`
+    + `<div class="set-row"><span>${pick(['バージョン', 'Version'])}</span><b>v${APP_VERSION}</b></div>`
+    + `<div class="set-row"><span>${pick(['開き方', 'Running as'])}</span><span>${matchMedia('(display-mode: standalone)').matches ? pick(['インストールしたアプリ', 'Installed app'])
+      : location.protocol === 'file:' ? pick(['パソコン内のファイル', 'Local file']) : pick(['ブラウザ', 'Browser'])}</span></div>`
+    + `<div class="set-row"><span>${pick(['更新内容', 'Release notes'])}</span><a href="https://github.com/kusam0ch1dayo/Unity-.cs-Editor/releases" target="_blank" rel="noopener">GitHub Releases</a></div></section>`;
+  const shortcutsTab = () => ''
     + `<section><h3>${pick(['ショートカット', 'Shortcuts'])}</h3><p class="hint">${pick(['チェックした項目がヘッダーに並び、ワンクリックで実行できます。↑↓ で並び順を変えられます。',
       'Checked items appear in the header for one-click access. Use ↑↓ to change the order.'])}</p>`
     + groups.map(g => `<div class="set-group">${g.icon} ${esc(pick(g.label))}</div>` + ACTIONS.filter(a => a.menu === g.id).map(a => {
@@ -155,19 +164,17 @@ function renderSettings() {
         + (pos >= 0 ? `<span class="order">${pos + 1}<button data-up="${a.id}" ${pos ? '' : 'disabled'} title="${pick(['前へ', 'Earlier'])}">↑</button><button data-down="${a.id}" ${pos < shortcuts.length - 1 ? '' : 'disabled'} title="${pick(['後ろへ', 'Later'])}">↓</button></span>` : '')
         + '</div>';
     }).join('')).join('')
-    + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`
-    + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '')
-    + `<section><h3>${pick(['このアプリについて', 'About'])}</h3>`
-    + `<div class="set-row"><span>${pick(['バージョン', 'Version'])}</span><b>v${APP_VERSION}</b></div>`
-    + `<div class="set-row"><span>${pick(['開き方', 'Running as'])}</span><span>${matchMedia('(display-mode: standalone)').matches ? pick(['インストールしたアプリ', 'Installed app'])
-      : location.protocol === 'file:' ? pick(['パソコン内のファイル', 'Local file']) : pick(['ブラウザ', 'Browser'])}</span></div>`
-    + `<div class="set-row"><span>${pick(['更新内容', 'Release notes'])}</span><a href="https://github.com/kusam0ch1dayo/Unity-.cs-Editor/releases" target="_blank" rel="noopener">GitHub Releases</a></div></section>`;
+    + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`;
+  const ext = () => ''
+    + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '');
+  const body = { general, theme: () => (typeof themeSettings === 'function' ? themeSettings() : ''), shortcuts: shortcutsTab, ext }[settingsTab];
+  document.getElementById('settingsBody').innerHTML = tabs + `<div class="set-panel">${body()}</div>`;
 }
 document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 document.getElementById('settingsBody').onchange = async e => {
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   const t = e.target, set = t.dataset.set, sc = t.dataset.sc;
-  if (set === 'theme') { themeMode = t.value; try { localStorage.setItem(THEME_KEY, themeMode); } catch (err) {} applyTheme(); }
+  if (typeof handleThemeSettings === 'function' && handleThemeSettings(e)) return;
   if (set === 'lang') return setLang(t.value);
   if (set === 'beginner' && t.checked !== beginner) press('beginner');
   if (set === 'memo') setMemo(t.checked);
@@ -177,6 +184,9 @@ document.getElementById('settingsBody').onchange = async e => {
   refreshShortcuts();
 };
 document.getElementById('settingsBody').onclick = async e => {
+  const st = e.target.closest('[data-stab]');
+  if (st) { settingsTab = st.dataset.stab; renderSettings(); return; }
+  if (typeof handleThemeSettings === 'function' && handleThemeSettings(e)) return;
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   if (typeof handleSnippetSettings === 'function' && handleSnippetSettings(e)) return;
   if (typeof handleAssetsSettings === 'function' && await handleAssetsSettings(e)) return;
