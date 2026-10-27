@@ -13,6 +13,8 @@ let failed = 0, passed = 0;
 function check(name, ok, detail = '') {
   if (ok) passed++; else failed++;
   console.log(`${ok ? '  ✔' : '  ✖'} ${name}${ok || !detail ? '' : `\n      ${String(detail).slice(0, 600)}`}`);
+  // GitHub Actions では、失敗をプルリクエストや実行結果の画面に注釈として出す
+  if (!ok && process.env.GITHUB_ACTIONS) console.log(`::error title=${name.replace(/[:,\n]/g, ' ')}::${String(detail || name).replace(/\n/g, ' ').slice(0, 600)}`);
 }
 
 // 静的ファイルのサーバー (リポジトリの外は返さない)
@@ -342,7 +344,7 @@ async function qolTests(browser, base) {
     for (const lang of ['ja', 'en']) await langTests(browser, base, lang);
     await featureTests(browser, base);
     await qolTests(browser, base);
-  } catch (e) { failed++; console.log('  ✖ ' + e.stack); }
+  } catch (e) { failed++; console.log('  ✖ ' + e.stack); if (process.env.GITHUB_ACTIONS) console.log(`::error title=テストが止まりました::${String(e.stack).replace(/\n/g, ' ').slice(0, 900)}`); }
   await browser.close(); server.close();
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(`\n${passed} 件成功 / ${failed} 件失敗`);
