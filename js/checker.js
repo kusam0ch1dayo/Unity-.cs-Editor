@@ -1,0 +1,277 @@
+// エラーチェック (意味チェックと tree-sitter による構文チェック)
+// ---------- 意味チェック ----------
+const REQUIRED = { list_add: ['LIST', 'VALUE'], list_remove: ['LIST', 'VALUE'], list_clear: ['LIST'], list_get: ['LIST', 'INDEX'],
+  list_set: ['LIST', 'INDEX', 'VALUE'], list_count: ['LIST'], list_contains: ['LIST', 'VALUE'], list_foreach: ['LIST'], var_set: ['VALUE'],
+  expr_stmt: ['EXPR'], instantiate: ['PREFAB'], controls_if: ['IF0'], controls_whileUntil: ['BOOL'], logic_compare: ['A', 'B'],
+  logic_operation: ['A', 'B'], logic_negate: ['BOOL'], text_concat: ['A', 'B'], list_insert: ['LIST', 'INDEX', 'VALUE'],
+  list_index_of: ['LIST', 'VALUE'], list_order: ['LIST'], dict_add: ['LIST', 'KEY', 'VALUE'], dict_contains: ['LIST', 'KEY'], dict_remove: ['LIST', 'KEY'],
+  ui_set_text: ['OBJ', 'VALUE'], prop_set: ['OBJ', 'VALUE'], prop_get: ['OBJ'], button_listener: ['OBJ'], audio_play: ['OBJ'], audio_oneshot: ['OBJ', 'CLIP'],
+  anim_trigger: ['OBJ'], anim_set: ['OBJ', 'VALUE'], prefs_set: ['VALUE'],
+  switch_stmt: ['VALUE'], set_active: ['BOOL'], load_scene: ['SCENE'], logic_ternary: ['IF', 'THEN', 'ELSE'] };
+const MEMBER_BLOCKS = ['field_def', 'property_def', 'property_expr', 'method_def', 'constructor_def', 'coroutine_def', 'unity_event', 'raw_member'];
+const lastWarn = new Map();
+function check() {
+  MODEL = model();
+  const out = [];
+  const E = (block, msg) => out.push({ block, level: 'error', msg }), W = (block, msg) => out.push({ block, level: 'warn', msg });
+  const name = (b, n) => { const v = f(b, n).trim(); if (!/^[A-Za-z_]\w*$/.test(v)) E(b, `名前 '${v}' は使えません`); return v; };
+  const type = (b, t) => { if (!knownType(t)) E(b, `型 '${t}' が見つかりません`); };
+  const assign = (b, target, vb) => { if (!vb) return; const s = typeOf(vb); if (!assignable(target, s)) E(b, `'${s}' を '${target}' に変換できません`); };
+  const want = (b, n, t) => assign(b, t, b.getInputTargetBlock(n));
+  const listOf = b => {
+    const t = typeOf(b.getInputTargetBlock('LIST'));
+    if (t !== '?' && elemOf(t) === '?') E(b, dictOf(t) ? 'Dictionary には辞書用のブロックを使ってください' : `'${t}' は List ではありません`);
+    return elemOf(t);
+  };
+  const listOrDict = b => {
+    const t = typeOf(b.getInputTargetBlock('LIST')), d = dictOf(t);
+    if (d) return d;
+    if (t !== '?' && elemOf(t) === '?') E(b, `'${t}' は List / Dictionary ではありません`);
+    return ['int', elemOf(t)];
+  };
+  const dictOfBlock = b => {
+    const t = typeOf(b.getInputTargetBlock('LIST'));
+    if (t !== '?' && !dictOf(t)) E(b, `'${t}' は Dictionary ではありません`);
+    return dictOf(t) || ['?', '?'];
+  };
+  const resolved = (b, path) => { const r = resolve(path, scopeOf(b)); if (r.err) E(b, r.err); else if (r.warn) W(b, r.warn); return r; };
+  const classNames = new Set(); let monos = 0;
+  for (const b of ws.getAllBlocks(true)) {
+    if (!b.isEnabled() || b.isShadow()) continue;
+    if ((REQUIRED[b.type] || []).some(n => !b.getInputTargetBlock(n))) E(b, '空いているスロットにブロックをつないでください');
+    const par = b.getSurroundParent();
+    if (par && par.type === 'switch_stmt' && !b.outputConnection && !['case_clause', 'default_clause'].includes(b.type)) { E(b, 'switch の中には case / default を置いてください'); continue; }
+    if (MEMBER_BLOCKS.includes(b.type)) {
+      if (!par || par.type !== 'class_def') { E(b, 'クラスの中に置いてください'); continue; }
+    } else if (!['class_def', 'enum_def', 'using_def', 'init_assign', 'switch_arm'].includes(b.type) && !b.outputConnection && !scopeOf(b).method) {
+      E(b, par && par.type === 'class_def' ? 'この文はメソッド (Unityイベント) の中に置いてください' : 'メソッド (Unityイベント) の中に置いてください');
+      continue;
+    } else if (b.outputConnection && !b.getParent()) { W(b, 'どこにもつながっていない式です'); continue; }
+
+    switch (b.type) {
+      case 'class_def': {
+        const n = name(b, 'NAME');
+        if (classNames.has(n)) E(b, `クラス '${n}' が重複しています`);
+        classNames.add(n);
+        if (isMono(MODEL.get(n)) && ++monos === 2) W(b, 'Unity では 1 ファイルに MonoBehaviour は 1 つ (ファイル名 = クラス名) にしてください');
+        const seen = new Set();
+        for (let m = b.getInputTargetBlock('MEMBERS'); m; m = m.getNextBlock()) {
+          if (m.type === 'raw_member') continue;
+          const key = m.type === 'unity_event' ? f(m, 'EVENT').split('(')[0]
+            : m.type === 'method_def' ? f(m, 'NAME') + '(' + params(f(m, 'PARAMS')).map(p => p[0]).join(',') + ')'
+            : m.type === 'constructor_def' ? 'コンストラクター(' + params(f(m, 'PARAMS')).map(p => p[0]).join(',') + ')' : f(m, 'NAME');
+          if (seen.has(key)) E(m, `'${key.split('(')[0]}' が重複しています`);
+          seen.add(key);
+        }
+        break;
+      }
+      case 'field_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
+      case 'method_def': {
+        const ret = f(b, 'RET').trim();
+        name(b, 'NAME'); type(b, ret);
+        params(f(b, 'PARAMS')).forEach(([t, n]) => t === '?' ? E(b, `引数 '${n}' の書き方が不正です (例: int a, string b)`) : type(b, t));
+        if (ret !== 'void' && !b.getDescendants(false).some(d => (d.type === 'return_stmt' && d.getInputTargetBlock('VALUE')) || d.type.startsWith('yield_')))
+          E(b, `'${f(b, 'NAME')}' は ${ret} を return する必要があります`);
+        break;
+      }
+      case 'var_local': {
+        const n = name(b, 'NAME'), t = f(b, 'TYPE').trim();
+        if (scopeOf(b).vars.has(n)) E(b, `'${n}' は既に定義されています`);
+        if (t === 'var') { if (!b.getInputTargetBlock('VALUE')) E(b, 'var には初期値が必要です'); }
+        else { type(b, t); want(b, 'VALUE', t); }
+        break;
+      }
+      case 'var_set': {
+        const r = resolved(b, f(b, 'NAME')), op = f(b, 'OP');
+        if (r.err) break;
+        if (op === '=') want(b, 'VALUE', r.type);
+        else if (r.type === 'bool' || (r.type === 'string' && op !== '+=')) E(b, `'${r.type}' に ${op} は使えません`);
+        break;
+      }
+      case 'var_get': resolved(b, f(b, 'NAME')); break;
+      case 'method_call': case 'method_call_expr': resolved(b, f(b, 'NAME') + '()'); break;
+      case 'new_object': {
+        const n = f(b, 'NAME').trim();
+        type(b, n);
+        if (isMono(MODEL.get(n))) W(b, 'MonoBehaviour は new できません。AddComponent<T>() を使ってください');
+        break;
+      }
+      case 'return_stmt': {
+        const m = scopeOf(b).method, vb = b.getInputTargetBlock('VALUE');
+        if (m.ret === 'IEnumerator') E(b, 'コルーチンでは return ではなく yield を使います');
+        else if (m.ret === 'void' && vb) E(b, 'void メソッドは値を返せません');
+        else if (m.ret !== 'void' && !vb) E(b, `${m.ret} の値を返す必要があります`);
+        else assign(b, m.ret, vb);
+        break;
+      }
+      case 'list_new': type(b, f(b, 'TYPE').trim()); break;
+      case 'get_component': {
+        const t = f(b, 'TYPE').trim();
+        type(b, t);
+        if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
+        break;
+      }
+      case 'list_add': case 'list_contains': want(b, 'VALUE', listOf(b)); break;
+      case 'list_set': { const [k, val] = listOrDict(b); want(b, 'VALUE', val); want(b, 'INDEX', k); break; }
+      case 'list_get': want(b, 'INDEX', listOrDict(b)[0]); break;
+      case 'list_remove': { const el = listOf(b); want(b, 'VALUE', f(b, 'OP') === 'RemoveAt' ? 'int' : el); break; }
+      case 'list_clear': case 'list_count': listOrDict(b); break;
+      case 'list_foreach': {
+        if (dictOf(typeOf(b.getInputTargetBlock('LIST')))) break;
+        const el = listOf(b), t = f(b, 'TYPE').trim();
+        name(b, 'VAR');
+        if (t !== 'var') { type(b, t); if (!assignable(t, el)) E(b, `'${el}' を '${t}' に変換できません`); }
+        break;
+      }
+      case 'controls_if': for (let i = 0; b.getInput('IF' + i); i++) want(b, 'IF' + i, 'bool'); break;
+      case 'controls_whileUntil': want(b, 'BOOL', 'bool'); break;
+      case 'logic_operation': want(b, 'A', 'bool'); want(b, 'B', 'bool'); break;
+      case 'logic_negate': want(b, 'BOOL', 'bool'); break;
+      case 'controls_repeat_ext': want(b, 'TIMES', 'int'); break;
+      case 'for_range': name(b, 'VAR'); want(b, 'FROM', 'int'); want(b, 'TO', 'int'); break;
+      case 'math_arithmetic':
+        if (f(b, 'OP') !== 'ADD' && ['A', 'B'].some(n => typeOf(b.getInputTargetBlock(n)) === 'string')) E(b, '文字列には + 以外の演算は使えません');
+        break;
+      case 'transform_set': want(b, 'VALUE', MEMBERS.Transform[f(b, 'PROP')]); break;
+      case 'transform_action': if (f(b, 'ACTION') !== 'LookAt') want(b, 'VEC', 'Vector3'); break;
+      case 'enum_def': {
+        const n = name(b, 'NAME');
+        if (classNames.has(n)) E(b, `'${n}' が重複しています`);
+        classNames.add(n);
+        f(b, 'VALUES').split(',').map(s => s.trim()).filter(Boolean).forEach(s => { if (!/^[A-Za-z_]\w*(\s*=\s*-?\d+)?$/.test(s)) E(b, `値 '${s}' は使えません`); });
+        break;
+      }
+      case 'property_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); break;
+      case 'constructor_def': case 'coroutine_def':
+        if (b.type === 'coroutine_def') {
+          name(b, 'NAME');
+          if (!b.getDescendants(false).some(d => d.type.startsWith('yield_'))) W(b, 'yield がありません');
+        }
+        params(f(b, 'PARAMS')).forEach(([t, n]) => t === '?' ? E(b, `引数 '${n}' の書き方が不正です (例: int a, string b)`) : type(b, t));
+        break;
+      case 'yield_wait': case 'yield_null':
+        if (scopeOf(b).method.ret !== 'IEnumerator') E(b, 'yield はコルーチンの中でのみ使えます');
+        if (b.type === 'yield_wait') want(b, 'SEC', 'float');
+        break;
+      case 'start_coroutine': {
+        const r = resolved(b, f(b, 'NAME') + '()');
+        if (!r.err && r.type !== '?' && r.type !== 'IEnumerator') E(b, `'${f(b, 'NAME')}' はコルーチン (IEnumerator) ではありません`);
+        break;
+      }
+      case 'invoke_stmt': resolved(b, f(b, 'NAME') + '()'); want(b, 'SEC', 'float'); break;
+      case 'case_clause': case 'default_clause': if (!par || par.type !== 'switch_stmt') E(b, 'switch の中に置いてください'); break;
+      case 'var_incr': {
+        const r = resolved(b, f(b, 'NAME'));
+        if (!r.err && !['int', 'float', 'double', 'long', '?'].includes(r.type)) E(b, `'${r.type}' に ${f(b, 'OP')} は使えません`);
+        break;
+      }
+      case 'math_func1': want(b, 'X', 'float'); break;
+      case 'math_func2': want(b, 'A', 'float'); want(b, 'B', 'float'); break;
+      case 'math_func3': ['A', 'B', 'C'].forEach(n => want(b, n, 'float')); break;
+      case 'logic_ternary': want(b, 'IF', 'bool'); break;
+      case 'vector3_func': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); break;
+      case 'vector3_lerp': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); want(b, 'C', 'float'); break;
+      case 'quaternion_euler': ['X', 'Y', 'Z'].forEach(n => want(b, n, 'float')); break;
+      case 'rb_addforce': want(b, 'RB', 'Rigidbody'); want(b, 'VEC', 'Vector3'); break;
+      case 'set_active': want(b, 'OBJ', 'GameObject'); want(b, 'BOOL', 'bool'); break;
+      case 'compare_tag': {
+        const t = typeOf(b.getInputTargetBlock('OBJ')), mem = membersOf(t);
+        if (t !== '?' && mem && !('CompareTag()' in mem)) E(b, `'${t}' に CompareTag はありません`);
+        break;
+      }
+      case 'add_component': {
+        const t = f(b, 'TYPE').trim();
+        type(b, t);
+        if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
+        break;
+      }
+      case 'load_scene': { const t = typeOf(b.getInputTargetBlock('SCENE')); if (!['string', 'int', '?'].includes(t)) E(b, 'シーン名 (string) か番号 (int) を指定してください'); break; }
+      case 'destroy': want(b, 'DELAY', 'float'); break;
+      case 'property_expr': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
+      case 'new_object_init': type(b, f(b, 'NAME').trim()); break;
+      case 'init_assign': {
+        if (!par || par.type !== 'new_object_init') { E(b, 'new { } (オブジェクト初期化子) の中に置いてください'); break; }
+        const t = f(par, 'NAME').trim(), mem = membersOf(t), n = f(b, 'NAME').trim();
+        if (mem && !(n in mem)) (MODEL.has(t) ? E : W)(b, `'${t}' に '${n}' はありません`);
+        else if (mem) want(b, 'VALUE', mem[n]);
+        break;
+      }
+      case 'switch_arm': if (!par || par.type !== 'switch_expr') E(b, 'switch 式の中に置いてください'); break;
+      case 'tuple_assign': resolved(b, f(b, 'NAME1')); resolved(b, f(b, 'NAME2')); break;
+      case 'array_new': type(b, f(b, 'TYPE').trim()); want(b, 'SIZE', 'int'); break;
+      case 'generic_call': case 'call_on': {
+        const n = f(b, 'NAME').trim(), t = b.getInputTargetBlock('OBJ') ? typeOf(b.getInputTargetBlock('OBJ')) : '?', mem = membersOf(t);
+        if (b.type === 'generic_call') {
+          type(b, f(b, 'TYPE').trim());
+          if (/Component/.test(n) && MODEL.has(f(b, 'TYPE').trim()) && !isMono(MODEL.get(f(b, 'TYPE').trim()))) E(b, `'${f(b, 'TYPE').trim()}' はコンポーネントではありません`);
+        }
+        if (mem && !(n + '()' in mem)) (MODEL.has(t) ? E : W)(b, `'${t}' に ${n} はありません`);
+        break;
+      }
+      case 'raycast_if': name(b, 'HIT'); want(b, 'ORIGIN', 'Vector3'); want(b, 'DIR', 'Vector3'); want(b, 'DIST', 'float'); break;
+      case 'raycast_mouse_if': name(b, 'HIT'); want(b, 'DIST', 'float'); break;
+      case 'hit_get': { const r = resolved(b, f(b, 'HIT')); if (!r.err && !['RaycastHit', '?'].includes(r.type)) E(b, `'${f(b, 'HIT')}' は RaycastHit ではありません`); break; }
+      case 'draw_ray': want(b, 'ORIGIN', 'Vector3'); want(b, 'DIR', 'Vector3'); want(b, 'COLOR', 'Color'); break;
+      case 'ui_set_text': case 'prop_set': case 'prop_get': {
+        const t = typeOf(b.getInputTargetBlock('OBJ')), mem = membersOf(t), p = b.type === 'ui_set_text' ? 'text' : f(b, 'PROP').trim();
+        if (mem && !(p in mem)) (MODEL.has(t) ? E : W)(b, `'${t}' に '${p}' はありません`);
+        else if (mem && b.type !== 'prop_get') want(b, 'VALUE', mem[p]);
+        break;
+      }
+      case 'button_listener': want(b, 'OBJ', 'Button'); resolved(b, f(b, 'NAME') + '()'); break;
+      case 'audio_play': want(b, 'OBJ', 'AudioSource'); break;
+      case 'audio_oneshot': want(b, 'OBJ', 'AudioSource'); want(b, 'CLIP', 'AudioClip'); break;
+      case 'anim_trigger': want(b, 'OBJ', 'Animator'); break;
+      case 'anim_set': want(b, 'OBJ', 'Animator'); want(b, 'VALUE', { SetBool: 'bool', SetFloat: 'float', SetInteger: 'int' }[f(b, 'FN')]); break;
+      case 'prefs_set': want(b, 'VALUE', { SetInt: 'int', SetFloat: 'float', SetString: 'string' }[f(b, 'FN')]); break;
+      case 'prefs_get': want(b, 'DEF', { GetInt: 'int', GetFloat: 'float', GetString: 'string' }[f(b, 'FN')]); break;
+
+      case 'list_insert': want(b, 'VALUE', listOf(b)); want(b, 'INDEX', 'int'); break;
+      case 'list_index_of': want(b, 'VALUE', listOf(b)); break;
+      case 'list_order': listOf(b); break;
+      case 'dict_new': type(b, f(b, 'KEY').trim()); type(b, f(b, 'VAL').trim()); break;
+      case 'dict_add': { const [k, val] = dictOfBlock(b); want(b, 'KEY', k); want(b, 'VALUE', val); break; }
+      case 'dict_contains': case 'dict_remove': want(b, 'KEY', dictOfBlock(b)[0]); break;
+
+      case 'vector3_new': ['X', 'Y', 'Z'].forEach(n => want(b, n, 'float')); break;
+      case 'random_range': want(b, 'A', 'float'); want(b, 'B', 'float'); break;
+      case 'instantiate': want(b, 'POS', 'Vector3'); break;
+    }
+  }
+  // ブロックに警告アイコンを付ける
+  const byBlock = new Map();
+  out.forEach(x => byBlock.set(x.block, new Set([...(byBlock.get(x.block) || []), (x.level === 'error' ? '✖ ' : '⚠ ') + x.msg])));
+  Blockly.Events.disable();
+  try {
+    for (const b of ws.getAllBlocks(false)) {
+      const t = [...(byBlock.get(b) || [])].join('\n');
+      if ((lastWarn.get(b.id) || '') !== t) { b.setWarningText(t || null); lastWarn.set(b.id, t); }
+    }
+  } finally { Blockly.Events.enable(); }
+  return out.filter((x, i) => out.findIndex(y => y.block === x.block && y.msg === x.msg) === i);
+}
+
+// ---------- 構文チェック (tree-sitter C# パーサー) ----------
+let tsParser = null, tsState = '構文チェッカー読込中…';
+(async () => {
+  try {
+    await TreeSitter.init({ locateFile: n => 'https://unpkg.com/web-tree-sitter@0.20.8/' + n });
+    const p = new TreeSitter();
+    p.setLanguage(await TreeSitter.Language.load('https://unpkg.com/tree-sitter-wasms@0.1.11/out/tree-sitter-c_sharp.wasm'));
+    tsParser = p; tsState = '';
+  } catch (e) { tsState = '構文チェッカーを読み込めませんでした (意味チェックのみ)'; }
+  if (typeof update === 'function') update();
+})();
+function syntaxErrors(src) {
+  if (!tsParser) return [];
+  const out = [], tree = tsParser.parse(src);
+  (function walk(n) {
+    if (n.type === 'ERROR' || n.isMissing()) {
+      out.push({ line: n.startPosition.row + 1, level: 'error',
+        msg: n.isMissing() ? `構文エラー: '${n.type}' がありません` : `構文エラー: ${src.slice(n.startIndex, n.endIndex).split('\n')[0].trim().slice(0, 40)}` });
+    } else if (n.hasError()) for (let i = 0; i < n.childCount; i++) walk(n.child(i));
+  })(tree.rootNode);
+  tree.delete();
+  return out;
+}
+
