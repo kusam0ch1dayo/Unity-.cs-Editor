@@ -47,3 +47,6 @@ C# を読み込んでブロックに戻すこともできます。
 
 - [Blockly](https://github.com/google/blockly) (Apache-2.0)
 - [web-tree-sitter](https://github.com/tree-sitter/tree-sitter) / [tree-sitter-c-sharp](https://github.com/tree-sitter/tree-sitter-c-sharp) (MIT)
+
+## 捕捉
+- このエディター等は全てAIが作成した物です。
