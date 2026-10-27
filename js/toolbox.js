@@ -92,3 +92,37 @@ const sample = { blocks: { languageVersion: 0, blocks: [
     ]) }), x: 20, y: 200 },
 ] } };
 
+
+// ---------- よく使うブロック (第2弾) をツールボックスに追加 ----------
+const tget = p => ({ block: { type: 'transform_get', fields: { PROP: p } } });
+const blk = (type, fields = {}) => ({ block: { type, fields } });
+const addBlocks = (name, items) => toolbox.contents.find(c => c.name === name).contents.push(...cat('', 0, items).contents);
+addBlocks('ループ', [{ type: 'for_step', inputs: { FROM: num(10), TO: num(0) } }, { type: 'do_while', inputs: { COND: { shadow: { type: 'logic_boolean' } } } }]);
+addBlocks('ロジック', [{ type: 'is_type', inputs: { VALUE: vget('other') } }, { type: 'as_expr', inputs: { VALUE: vget('other') } },
+  { type: 'null_coalesce', inputs: { A: vget('target'), B: vget('gameObject') } }, 'try_catch']);
+addBlocks('数値・文字', ['math_const', 'interp_string', { type: 'to_string_fmt', inputs: { VALUE: { block: { type: 'time_value', fields: { PROP: 'time' } } } } },
+  { type: 'string_check', inputs: { VALUE: vget('playerName') } }, { type: 'parse_num', inputs: { VALUE: txt('10') } }, { type: 'cast_any', inputs: { VALUE: tget('right') } }]);
+addBlocks('リスト', ['array_init']);
+addBlocks('Unity', [{ type: 'input_button' }, { type: 'vector2_new', inputs: { X: num(0), Y: num(0) } }, 'vector2_const',
+  { type: 'quaternion_lerp', inputs: { A: tget('rotation'), B: vget('targetRotation'), T: { block: { type: 'time_value' } } } },
+  { type: 'quaternion_look', inputs: { DIR: blk('vector3_const', { DIR: 'forward' }) } }, { type: 'quaternion_axis', inputs: { ANGLE: num(90), AXIS: blk('vector3_const', { DIR: 'up' }) } },
+  { type: 'color_new', inputs: { R: num(1), G: num(1), B: num(1), A: num(1) } }]);
+addBlocks('オブジェクト', [{ type: 'instantiate_one', inputs: { PREFAB: vget('prefab') } },
+  { type: 'instantiate_rot', inputs: { PREFAB: vget('prefab'), POS: tget('position'), ROT: tget('rotation') } },
+  { type: 'dont_destroy', inputs: { OBJ: vget('gameObject') } }, { type: 'try_get_component_if', inputs: { OBJ: vget('other') } }, 'cursor_lock', 'scene_info']);
+addBlocks('コルーチン', [{ type: 'invoke_repeating', inputs: { DELAY: num(0), RATE: num(1) } }, 'stop_coroutines', { type: 'yield_until', inputs: { COND: vget('isReady') } },
+  'yield_frame', 'yield_break']);
+addBlocks('サウンド・アニメ', [{ type: 'anim_play', inputs: { OBJ: vget('animator') } }, { type: 'audio_clip_at_point', inputs: { CLIP: vget('clip'), POS: tget('position') } }]);
+toolbox.contents.splice(toolbox.contents.findIndex(c => c.name === 'その他'), 0,
+  cat('2D物理', 15, [{ type: 'raycast2d', inputs: { ORIGIN: tget('position'), DIR: blk('vector2_const', { DIR: 'down' }), DIST: num(1) } },
+    { type: 'physics_overlap', inputs: { POS: tget('position'), R: num(1) } }, 'layer_mask',
+    { type: 'rb2d_addforce', inputs: { RB: blk('get_component', { TYPE: 'Rigidbody2D' }), VEC: blk('vector2_const', { DIR: 'up' }) } },
+    { type: 'var_set', fields: { NAME: 'rb.velocity' }, inputs: { VALUE: { block: { type: 'vector2_new', inputs: { X: num(0), Y: num(0) } } } } }]),
+  cat('Gizmos・デバッグ', 50, [{ type: 'gizmos_color', inputs: { VALUE: blk('color_const', { COLOR: 'yellow' }) } },
+    { type: 'gizmos_sphere', inputs: { CENTER: tget('position'), R: num(1) } }, { type: 'gizmos_cube', inputs: { CENTER: tget('position'), SIZE: blk('vector3_const', { DIR: 'one' }) } },
+    { type: 'gizmos_line', inputs: { A: tget('position'), B: vget('target.position') } },
+    { type: 'draw_line', inputs: { A: tget('position'), B: vget('target.position'), COLOR: blk('color_const', { COLOR: 'green' }) } }]),
+  cat('ラムダ式', 290, ['lambda_expr', { type: 'lambda_block', inputs: { BODY: { block: { type: 'debug_log', inputs: { MSG: txt('clicked') } } } } },
+    { type: 'button_listener_lambda', inputs: { OBJ: vget('button'), FN: { block: { type: 'lambda_block', inputs: { BODY: { block: { type: 'debug_log', inputs: { MSG: txt('clicked') } } } } } } } }]),
+  cat('コメント・属性', 270, ['comment_stmt', 'comment_member', 'attr', { type: 'attr', fields: { CODE: 'Range(0, 10)' } },
+    { type: 'attr', fields: { CODE: 'Tooltip("説明")' } }, { type: 'attr', fields: { CODE: 'HideInInspector' } }, 'class_attr']));

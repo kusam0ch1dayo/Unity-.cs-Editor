@@ -26,7 +26,15 @@ const v = (b, n, o, d = '') => cs.valueToCode(b, n, o) || d;
 const st = (b, n) => cs.statementToCode(b, n);
 const block = (head, b, n) => `${head}\n{\n${st(b, n)}}\n`;
 const lit = t => '"' + t.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
-const gap = b => { const p = b.getPreviousBlock(); return p && p.type !== 'class_def' ? '\n' : ''; };
+// メソッドの前に空行を入れる。属性やコメントは、それが付くメンバーと一緒に扱う
+const DECOR = ['attr', 'comment_member'], METHODISH = ['method_def', 'unity_event', 'coroutine_def', 'constructor_def'];
+const gap = b => {
+  const p = b.getPreviousBlock();
+  if (!p || p.type === 'class_def' || DECOR.includes(p.type)) return '';
+  let t = b;
+  while (t && DECOR.includes(t.type)) t = t.getNextBlock();
+  return t && METHODISH.includes(t.type) ? '\n' : '';
+};
 const G = cs.forBlock;
 
 G.class_def = b => {
@@ -61,7 +69,7 @@ G.vector3_new = b => [`new Vector3(${['X', 'Y', 'Z'].map(k => v(b, k, O.NONE, '0
 G.vector3_const = b => [`Vector3.${f(b, 'DIR')}`, O.MEMBER];
 G.time_value = b => [`Time.${f(b, 'PROP')}`, O.MEMBER];
 G.input_key = b => [`Input.${f(b, 'MODE')}(KeyCode.${f(b, 'KEY')})`, O.MEMBER];
-G.input_axis = b => [`Input.GetAxis("${f(b, 'AXIS')}")`, O.MEMBER];
+G.input_axis = b => [`Input.${f(b, 'MODE')}("${f(b, 'AXIS')}")`, O.MEMBER];
 G.transform_action = b => `transform.${f(b, 'ACTION')}(${v(b, 'VEC', O.NONE, 'Vector3.zero')});\n`;
 G.transform_set = b => `transform.${f(b, 'PROP')} = ${v(b, 'VALUE', O.ASSIGN, 'Vector3.zero')};\n`;
 G.transform_get = b => [`transform.${f(b, 'PROP')}`, O.MEMBER];
@@ -84,9 +92,9 @@ G.enum_def = b => `public enum ${f(b, 'NAME')}\n{\n${f(b, 'VALUES').split(',').m
 G.property_def = b => `${mod(f(b, 'ACCESS'))}${f(b, 'TYPE')} ${f(b, 'NAME')} { ${f(b, 'ACC')} }\n`;
 G.constructor_def = b => gap(b) + block(`public ${ownerClass(b)}(${f(b, 'PARAMS')})`, b, 'BODY');
 G.coroutine_def = b => gap(b) + block(`IEnumerator ${f(b, 'NAME')}(${f(b, 'PARAMS')})`, b, 'BODY');
-G.yield_wait = b => `yield return new WaitForSeconds(${v(b, 'SEC', O.NONE, '1')});\n`;
+G.yield_wait = b => `yield return new ${f(b, 'KIND')}(${v(b, 'SEC', O.NONE, '1')});\n`;
 G.yield_null = () => 'yield return null;\n';
-G.start_coroutine = b => `StartCoroutine(${f(b, 'NAME')}());\n`;
+G.start_coroutine = b => `StartCoroutine(${f(b, 'NAME')}(${f(b, 'ARGS')}));\n`;
 G.invoke_stmt = b => `Invoke(${lit(f(b, 'NAME'))}, ${v(b, 'SEC', O.NONE, '0')});\n`;
 G.switch_stmt = b => block(`switch (${v(b, 'VALUE', O.NONE, '0')})`, b, 'CASES');
 G.case_clause = b => `case ${f(b, 'VALUE')}:\n${caseBody(b)}`;
@@ -158,6 +166,59 @@ G.switch_expr = b => {
 };
 G.switch_arm = () => '';
 G.array_new = b => [`new ${f(b, 'TYPE')}[${v(b, 'SIZE', O.NONE, '0')}]`, O.MEMBER];
+
+const comment = t => t.startsWith('/*') ? t : t.startsWith('/') ? '//' + t : '// ' + t;
+G.comment_stmt = b => comment(f(b, 'TEXT')) + '\n';
+G.comment_member = b => gap(b) + comment(f(b, 'TEXT')) + '\n';
+G.attr = b => gap(b) + `[${f(b, 'CODE')}]\n`;
+G.class_attr = b => `[${f(b, 'CODE')}]\n`;
+G.for_step = b => { const i = f(b, 'VAR'); return block(`for (int ${i} = ${v(b, 'FROM', O.ASSIGN, '0')}; ${i} ${f(b, 'CMP')} ${v(b, 'TO', O.REL, '0')}; ${i}${f(b, 'STEP')})`, b, 'DO'); };
+G.do_while = b => `do\n{\n${st(b, 'DO')}} while (${v(b, 'COND', O.NONE, 'false')});\n`;
+G.try_catch = b => block('try', b, 'TRY') + block(`catch (${f(b, 'TYPE')} ${f(b, 'VAR')})`, b, 'CATCH');
+G.interp_string = b => [`$"${f(b, 'TEXT')}"`, O.ATOMIC];
+G.to_string_fmt = b => [`${v(b, 'VALUE', O.MEMBER, '0')}.ToString(${lit(f(b, 'FMT'))})`, O.MEMBER];
+G.string_check = b => [`string.${f(b, 'FN')}(${v(b, 'VALUE', O.NONE, '""')})`, O.MEMBER];
+G.parse_num = b => [`${f(b, 'TYPE')}.Parse(${v(b, 'VALUE', O.NONE, '"0"')})`, O.MEMBER];
+G.math_const = b => [`Mathf.${f(b, 'C')}`, O.MEMBER];
+G.cast_any = b => [`(${f(b, 'TYPE')})${v(b, 'VALUE', O.UNARY, 'null')}`, O.UNARY];
+G.as_expr = b => [`${v(b, 'VALUE', O.REL, 'null')} as ${f(b, 'TYPE')}`, O.REL];
+G.is_type = b => [`${v(b, 'VALUE', O.REL, 'null')} is ${f(b, 'TYPE')}`, O.REL];
+G.null_coalesce = b => [`${v(b, 'A', O.OR, 'null')} ?? ${v(b, 'B', O.COND, 'null')}`, O.COND];
+G.lambda_expr = b => [`(${f(b, 'PARAMS')}) => ${v(b, 'VALUE', O.NONE, 'null')}`, O.ASSIGN];
+G.lambda_block = b => [`(${f(b, 'PARAMS')}) =>\n{\n${st(b, 'BODY')}}`, O.ASSIGN];
+G.button_listener_lambda = b => `${v(b, 'OBJ', O.MEMBER, 'button')}.onClick.AddListener(${v(b, 'FN', O.NONE, '() => { }')});\n`;
+G.array_init = b => [`new ${f(b, 'TYPE')}[] { ${f(b, 'ITEMS')} }`, O.MEMBER];
+G.vector2_new = b => [`new Vector2(${v(b, 'X', O.NONE, '0')}, ${v(b, 'Y', O.NONE, '0')})`, O.MEMBER];
+G.vector2_const = b => [`Vector2.${f(b, 'DIR')}`, O.MEMBER];
+G.quaternion_lerp = b => [`Quaternion.${f(b, 'FN')}(${v(b, 'A', O.NONE, 'transform.rotation')}, ${v(b, 'B', O.NONE, 'Quaternion.identity')}, ${v(b, 'T', O.NONE, '0')})`, O.MEMBER];
+G.quaternion_look = b => [`Quaternion.LookRotation(${v(b, 'DIR', O.NONE, 'Vector3.forward')})`, O.MEMBER];
+G.quaternion_axis = b => [`Quaternion.AngleAxis(${v(b, 'ANGLE', O.NONE, '0')}, ${v(b, 'AXIS', O.NONE, 'Vector3.up')})`, O.MEMBER];
+G.color_new = b => { const a = v(b, 'A', O.NONE); return [`new Color(${['R', 'G', 'B'].map(k => v(b, k, O.NONE, '0')).join(', ')}${a ? ', ' + a : ''})`, O.MEMBER]; };
+G.input_button = b => [`Input.${f(b, 'MODE')}(${lit(f(b, 'NAME'))})`, O.MEMBER];
+G.instantiate_one = b => [`Instantiate(${v(b, 'PREFAB', O.NONE, 'null')})`, O.MEMBER];
+G.instantiate_rot = b => [`Instantiate(${v(b, 'PREFAB', O.NONE, 'null')}, ${v(b, 'POS', O.NONE, 'Vector3.zero')}, ${v(b, 'ROT', O.NONE, 'Quaternion.identity')})`, O.MEMBER];
+G.dont_destroy = b => `DontDestroyOnLoad(${v(b, 'OBJ', O.NONE, 'gameObject')});\n`;
+G.try_get_component_if = b => { const o = v(b, 'OBJ', O.MEMBER); return block(`if (${o ? o + '.' : ''}TryGetComponent(out ${f(b, 'TYPE')} ${f(b, 'VAR')}))`, b, 'DO'); };
+G.cursor_lock = b => `Cursor.lockState = CursorLockMode.${f(b, 'MODE')};\n`;
+G.scene_info = b => [`SceneManager.GetActiveScene().${f(b, 'PROP')}`, O.MEMBER];
+// 省略可能な引数は、つながっているところまでを出力
+const optArgs = (b, names) => { const out = []; for (const n of names) { const c = v(b, n, O.NONE); if (!c) break; out.push(c); } return out; };
+G.raycast2d = b => [`Physics2D.Raycast(${[v(b, 'ORIGIN', O.NONE, 'transform.position'), v(b, 'DIR', O.NONE, 'Vector2.down'), ...optArgs(b, ['DIST', 'LAYER'])].join(', ')})`, O.MEMBER];
+G.physics_overlap = b => [`${f(b, 'FN')}(${[v(b, 'POS', O.NONE, 'transform.position'), v(b, 'R', O.NONE, '1'), ...optArgs(b, ['LAYER'])].join(', ')})`, O.MEMBER];
+G.layer_mask = b => [`LayerMask.GetMask(${f(b, 'NAMES').split(',').map(s => s.trim()).filter(Boolean).map(lit).join(', ')})`, O.MEMBER];
+G.rb2d_addforce = b => `${v(b, 'RB', O.MEMBER, 'GetComponent<Rigidbody2D>()')}.AddForce(${v(b, 'VEC', O.NONE, 'Vector2.up')}, ForceMode2D.${f(b, 'MODE')});\n`;
+G.invoke_repeating = b => `InvokeRepeating(${lit(f(b, 'NAME'))}, ${v(b, 'DELAY', O.NONE, '0')}, ${v(b, 'RATE', O.NONE, '1')});\n`;
+G.stop_coroutines = () => 'StopAllCoroutines();\n';
+G.yield_until = b => `yield return new ${f(b, 'KIND')}(() => ${v(b, 'COND', O.NONE, 'true')});\n`;
+G.yield_frame = b => `yield return new ${f(b, 'KIND')}();\n`;
+G.yield_break = () => 'yield break;\n';
+G.anim_play = b => `${v(b, 'OBJ', O.MEMBER, 'animator')}.Play(${lit(f(b, 'NAME'))});\n`;
+G.audio_clip_at_point = b => `AudioSource.PlayClipAtPoint(${v(b, 'CLIP', O.NONE, 'null')}, ${v(b, 'POS', O.NONE, 'transform.position')});\n`;
+G.gizmos_color = b => `Gizmos.color = ${v(b, 'VALUE', O.ASSIGN, 'Color.white')};\n`;
+G.gizmos_sphere = b => `Gizmos.${f(b, 'FN')}(${v(b, 'CENTER', O.NONE, 'transform.position')}, ${v(b, 'R', O.NONE, '1')});\n`;
+G.gizmos_cube = b => `Gizmos.${f(b, 'FN')}(${v(b, 'CENTER', O.NONE, 'transform.position')}, ${v(b, 'SIZE', O.NONE, 'Vector3.one')});\n`;
+G.gizmos_line = b => `Gizmos.DrawLine(${v(b, 'A', O.NONE, 'transform.position')}, ${v(b, 'B', O.NONE, 'Vector3.zero')});\n`;
+G.draw_line = b => { const c = v(b, 'COLOR', O.NONE); return `Debug.DrawLine(${v(b, 'A', O.NONE, 'transform.position')}, ${v(b, 'B', O.NONE, 'Vector3.zero')}${c ? ', ' + c : ''});\n`; };
 
 // 標準ブロック
 G.controls_if = b => {

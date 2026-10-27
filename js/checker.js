@@ -7,8 +7,10 @@ const REQUIRED = { list_add: ['LIST', 'VALUE'], list_remove: ['LIST', 'VALUE'], 
   list_index_of: ['LIST', 'VALUE'], list_order: ['LIST'], dict_add: ['LIST', 'KEY', 'VALUE'], dict_contains: ['LIST', 'KEY'], dict_remove: ['LIST', 'KEY'],
   ui_set_text: ['OBJ', 'VALUE'], prop_set: ['OBJ', 'VALUE'], prop_get: ['OBJ'], button_listener: ['OBJ'], audio_play: ['OBJ'], audio_oneshot: ['OBJ', 'CLIP'],
   anim_trigger: ['OBJ'], anim_set: ['OBJ', 'VALUE'], prefs_set: ['VALUE'],
+  do_while: ['COND'], is_type: ['VALUE'], as_expr: ['VALUE'], cast_any: ['VALUE'], null_coalesce: ['A', 'B'], button_listener_lambda: ['OBJ', 'FN'],
+  instantiate_one: ['PREFAB'], instantiate_rot: ['PREFAB'], string_check: ['VALUE'], parse_num: ['VALUE'], gizmos_color: ['VALUE'],
   switch_stmt: ['VALUE'], set_active: ['BOOL'], load_scene: ['SCENE'], logic_ternary: ['IF', 'THEN', 'ELSE'] };
-const MEMBER_BLOCKS = ['field_def', 'property_def', 'property_expr', 'method_def', 'constructor_def', 'coroutine_def', 'unity_event', 'raw_member'];
+const MEMBER_BLOCKS = ['field_def', 'property_def', 'property_expr', 'attr', 'comment_member', 'method_def', 'constructor_def', 'coroutine_def', 'unity_event', 'raw_member'];
 const lastWarn = new Map();
 function check() {
   MODEL = model();
@@ -43,7 +45,7 @@ function check() {
     if (par && par.type === 'switch_stmt' && !b.outputConnection && !['case_clause', 'default_clause'].includes(b.type)) { E(b, 'switch の中には case / default を置いてください'); continue; }
     if (MEMBER_BLOCKS.includes(b.type)) {
       if (!par || par.type !== 'class_def') { E(b, 'クラスの中に置いてください'); continue; }
-    } else if (!['class_def', 'enum_def', 'using_def', 'init_assign', 'switch_arm'].includes(b.type) && !b.outputConnection && !scopeOf(b).method) {
+    } else if (!['class_def', 'enum_def', 'using_def', 'init_assign', 'switch_arm', 'class_attr'].includes(b.type) && !b.outputConnection && !scopeOf(b).method) {
       E(b, par && par.type === 'class_def' ? 'この文はメソッド (Unityイベント) の中に置いてください' : 'メソッド (Unityイベント) の中に置いてください');
       continue;
     } else if (b.outputConnection && !b.getParent()) { W(b, 'どこにもつながっていない式です'); continue; }
@@ -56,7 +58,7 @@ function check() {
         if (isMono(MODEL.get(n)) && ++monos === 2) W(b, 'Unity では 1 ファイルに MonoBehaviour は 1 つ (ファイル名 = クラス名) にしてください');
         const seen = new Set();
         for (let m = b.getInputTargetBlock('MEMBERS'); m; m = m.getNextBlock()) {
-          if (m.type === 'raw_member') continue;
+          if (['raw_member', 'attr', 'comment_member'].includes(m.type)) continue;
           const key = m.type === 'unity_event' ? f(m, 'EVENT').split('(')[0]
             : m.type === 'method_def' ? f(m, 'NAME') + '(' + params(f(m, 'PARAMS')).map(p => p[0]).join(',') + ')'
             : m.type === 'constructor_def' ? 'コンストラクター(' + params(f(m, 'PARAMS')).map(p => p[0]).join(',') + ')' : f(m, 'NAME');
@@ -149,9 +151,10 @@ function check() {
         }
         params(f(b, 'PARAMS')).forEach(([t, n]) => t === '?' ? E(b, `引数 '${n}' の書き方が不正です (例: int a, string b)`) : type(b, t));
         break;
-      case 'yield_wait': case 'yield_null':
+      case 'yield_wait': case 'yield_null': case 'yield_until': case 'yield_frame': case 'yield_break':
         if (scopeOf(b).method.ret !== 'IEnumerator') E(b, 'yield はコルーチンの中でのみ使えます');
         if (b.type === 'yield_wait') want(b, 'SEC', 'float');
+        if (b.type === 'yield_until') want(b, 'COND', 'bool');
         break;
       case 'start_coroutine': {
         const r = resolved(b, f(b, 'NAME') + '()');
@@ -187,6 +190,39 @@ function check() {
       }
       case 'load_scene': { const t = typeOf(b.getInputTargetBlock('SCENE')); if (!['string', 'int', '?'].includes(t)) E(b, 'シーン名 (string) か番号 (int) を指定してください'); break; }
       case 'destroy': want(b, 'DELAY', 'float'); break;
+      case 'class_attr': { const nx = b.getNextBlock(); if (!nx || !['class_def', 'class_attr'].includes(nx.type)) W(b, 'クラス属性の下にクラスをつなげてください'); break; }
+      case 'for_step': name(b, 'VAR'); want(b, 'FROM', 'int'); want(b, 'TO', 'int'); break;
+      case 'do_while': want(b, 'COND', 'bool'); break;
+      case 'try_catch': type(b, f(b, 'TYPE').trim()); name(b, 'VAR'); break;
+      case 'interp_string':
+        for (const m of f(b, 'TEXT').matchAll(/\{([^{}:]+)(?::[^{}]*)?\}/g)) if (/^[A-Za-z_][\w.]*$/.test(m[1].trim())) resolved(b, m[1].trim());
+        break;
+      case 'string_check': case 'parse_num': want(b, 'VALUE', 'string'); break;
+      case 'cast_any': case 'as_expr': case 'is_type': case 'array_init': type(b, f(b, 'TYPE').trim()); break;
+      case 'vector2_new': want(b, 'X', 'float'); want(b, 'Y', 'float'); break;
+      case 'quaternion_lerp': want(b, 'A', 'Quaternion'); want(b, 'B', 'Quaternion'); want(b, 'T', 'float'); break;
+      case 'quaternion_look': want(b, 'DIR', 'Vector3'); break;
+      case 'quaternion_axis': want(b, 'ANGLE', 'float'); want(b, 'AXIS', 'Vector3'); break;
+      case 'color_new': ['R', 'G', 'B', 'A'].forEach(n => want(b, n, 'float')); break;
+      case 'instantiate_rot': want(b, 'POS', 'Vector3'); want(b, 'ROT', 'Quaternion'); break;
+      case 'try_get_component_if': {
+        const t = f(b, 'TYPE').trim();
+        type(b, t); name(b, 'VAR');
+        if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
+        break;
+      }
+      case 'raycast2d': want(b, 'DIST', 'float'); want(b, 'LAYER', 'int'); break;
+      case 'physics_overlap': want(b, 'R', 'float'); want(b, 'LAYER', 'int'); break;
+      case 'rb2d_addforce': want(b, 'RB', 'Rigidbody2D'); want(b, 'VEC', 'Vector2'); break;
+      case 'invoke_repeating': resolved(b, f(b, 'NAME') + '()'); want(b, 'DELAY', 'float'); want(b, 'RATE', 'float'); break;
+      case 'anim_play': want(b, 'OBJ', 'Animator'); break;
+      case 'audio_clip_at_point': want(b, 'CLIP', 'AudioClip'); want(b, 'POS', 'Vector3'); break;
+      case 'gizmos_color': want(b, 'VALUE', 'Color'); break;
+      case 'gizmos_sphere': want(b, 'CENTER', 'Vector3'); want(b, 'R', 'float'); break;
+      case 'gizmos_cube': want(b, 'CENTER', 'Vector3'); want(b, 'SIZE', 'Vector3'); break;
+      case 'gizmos_line': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); break;
+      case 'draw_line': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); want(b, 'COLOR', 'Color'); break;
+      case 'button_listener_lambda': want(b, 'OBJ', 'Button'); break;
       case 'property_expr': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
       case 'new_object_init': type(b, f(b, 'NAME').trim()); break;
       case 'init_assign': {

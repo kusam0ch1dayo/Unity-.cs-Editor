@@ -13,13 +13,13 @@ function checksOf(type) {
 }
 const Imp = {
   run(src) {
-    this.src = src; this.log = []; this.seq = 0; this.notes = new Set();
+    this.src = src; this.log = []; this.seq = 0; this.comments = 0; this.notes = new Set();
     const tree = tsParser.parse(src), tops = [];
     if (tree.rootNode.hasError()) this.notes.add('入力に構文エラーがあります (その部分は「C# 文」ブロックになります)');
     this.top(tree.rootNode, tops);
     let comments = 0;
     (function w(x) { if (x.type === 'comment') comments++; else x.namedChildren.forEach(w); })(tree.rootNode);
-    if (comments) this.notes.add(`コメント ${comments} 件は省略しました (ブロックにはコメントを残せません)`);
+    if (comments > this.comments) this.notes.add(`コメント ${comments - this.comments} 件は省略しました (式の途中やクラスの外のコメント)`);
     tree.delete();
     return tops;
   },
@@ -157,43 +157,55 @@ const Imp = {
   },
   cls(n) {
     const attrs = this.attrs(n), mods = this.mods(n), bases = n.childForFieldName('bases'), body = n.childForFieldName('body');
-    attrs.filter(a => !/\bSerializable\b/.test(a)).forEach(a => this.notes.add(`属性 ${a} は省略しました`));
     if (mods && !['public', 'internal'].includes(mods)) this.notes.add(`クラス修飾子 '${mods}' は省略しました`);
     if (n.childForFieldName('type_parameters')) this.notes.add('ジェネリッククラスの型引数は省略しました');
-    return this.B('class_def', {
-      SER: attrs.some(a => /\bSerializable\b/.test(a)), ACCESS: mods.includes('public') ? 'public' : 'internal',
+    const isSer = a => /^\[\s*(System\.)?Serializable\s*\]$/.test(a);
+    const cb = this.B('class_def', {
+      SER: attrs.some(isSer), ACCESS: mods.includes('public') ? 'public' : 'internal',
       NAME: this.t(n.childForFieldName('name')), BASE: bases ? this.flat(bases).replace(/^:\s*/, '') : '',
     }, { MEMBERS: this.chain(body ? body.namedChildren.flatMap(m => this.member(m)) : []) });
+    const pre = attrs.filter(a => !isSer(a)).map(a => this.B('class_attr', { CODE: a.slice(1, -1).trim() }));
+    return pre.length ? this.chain([...pre, cb]).block : cb;
   },
   member(m) {
-    const attrs = this.attrs(m), mods = this.mods(m);
+    if (m.type === 'comment') return [this.B('comment_member', { TEXT: this.comment(m) })];
+    const all = this.attrs(m), mods = this.mods(m), isSer = a => /^\[\s*SerializeField\s*\]$/.test(a);
+    const ser = m.type === 'field_declaration' && all.some(isSer), attrs = all.filter(a => !(ser && isSer(a)));
+    const res = this.memberCore(m, mods, ser);
+    return res ? [...attrs.map(a => this.B('attr', { CODE: a.slice(1, -1).trim() })), ...res] : [this.raw(m, 'raw_member')];
+  },
+  // コメントの中身 (// は外す。/* */ はそのまま)
+  comment(n) {
+    this.comments++;
+    const t = this.t(n).trim();
+    return t.startsWith('//') ? t.slice(2).replace(/^ /, '') : t.replace(/\s*\n\s*/g, ' ');
+  },
+  memberCore(m, mods, ser) {
     switch (m.type) {
-      case 'comment': return [];
       case 'field_declaration': {
-        const ser = attrs.length === 1 && /^\[\s*SerializeField\s*\]$/.test(attrs[0]);
         const access = ser ? '[SerializeField]' + (mods ? ' ' + mods : '') : mods || 'none';
-        if ((attrs.length && !ser) || !ACCESS.some(a => a[1] === access)) break;
+        if (!ACCESS.some(a => a[1] === access)) break;
         return this.decls(m.namedChildren.find(c => c.type === 'variable_declaration')).map(([type, name, init]) =>
           this.B('field_def', { ACCESS: access, TYPE: type, NAME: name }, { VALUE: this.val('field_def', 'VALUE', init) }));
       }
       case 'property_declaration': {
         const arrow = m.childForFieldName('value');
-        if (arrow && arrow.type === 'arrow_expression_clause' && !attrs.length && PROP_ACCESS.includes(mods || 'none'))
+        if (arrow && arrow.type === 'arrow_expression_clause' && PROP_ACCESS.includes(mods || 'none'))
           return [this.B('property_expr', { ACCESS: mods || 'none', TYPE: this.t(m.childForFieldName('type')), NAME: this.t(m.childForFieldName('name')) },
             { VALUE: this.val('property_expr', 'VALUE', arrow.namedChildren[0]) })];
         const acc = m.childForFieldName('accessors'), inner = acc ? this.flat(acc).replace(/^\{|\}$/g, '').trim().replace(/\s+/g, ' ') : '';
-        if (attrs.length || !PROP_ACCESS.includes(mods || 'none') || !['get; set;', 'get; private set;', 'get;'].includes(inner)
+        if (!PROP_ACCESS.includes(mods || 'none') || !['get; set;', 'get; private set;', 'get;'].includes(inner)
             || m.namedChildren.some(c => c.type === 'equals_value_clause')) break;
         return [this.B('property_def', { ACCESS: mods || 'none', TYPE: this.t(m.childForFieldName('type')), NAME: this.t(m.childForFieldName('name')), ACC: inner })];
       }
       case 'constructor_declaration': {
         const body = m.childForFieldName('body');
-        if (attrs.length || mods !== 'public' || !body || m.namedChildren.some(c => c.type === 'constructor_initializer')) break;
+        if (mods !== 'public' || !body || m.namedChildren.some(c => c.type === 'constructor_initializer')) break;
         return [this.B('constructor_def', { PARAMS: this.params(m) }, { BODY: this.body(body) })];
       }
       case 'method_declaration': {
         const body = m.childForFieldName('body');
-        if (attrs.length || !body || body.type !== 'block' || m.childForFieldName('type_parameters')) break;
+        if (!body || body.type !== 'block' || m.childForFieldName('type_parameters')) break;
         const name = this.t(m.childForFieldName('name')), ret = this.t(m.childForFieldName('type')), ps = this.params(m), acc = mods || 'none';
         if (ret === 'void' && ['none', 'private'].includes(acc) && EVENTS.includes(`${name}(${ps})`)) return [this.B('unity_event', { EVENT: `${name}(${ps})` }, { BODY: this.body(body) })];
         if (ret === 'IEnumerator' && ['none', 'private'].includes(acc)) return [this.B('coroutine_def', { NAME: name, PARAMS: ps }, { BODY: this.body(body) })];
@@ -201,13 +213,24 @@ const Imp = {
         return [this.B('method_def', { ACCESS: acc, RET: ret, NAME: name, PARAMS: ps }, { BODY: this.body(body) })];
       }
     }
-    return [this.raw(m, 'raw_member')];
+    return null;
   },
   body(n) { return n ? this.chain(n.type === 'block' ? n.namedChildren.flatMap(c => this.st(c)) : this.st(n)) : null; },
 
   st(n) {
     switch (n.type) {
-      case 'comment': return [];
+      case 'comment': return [this.B('comment_stmt', { TEXT: this.comment(n) })];
+      case 'do_statement': {
+        const [body, cond] = n.namedChildren.filter(c => c.type !== 'comment');
+        return [this.B('do_while', {}, { DO: this.body(body), COND: this.val('do_while', 'COND', cond) })];
+      }
+      case 'try_statement': {
+        const catches = n.namedChildren.filter(c => c.type === 'catch_clause'), c = catches[0];
+        const decl = c && c.namedChildren.find(x => x.type === 'catch_declaration');
+        if (catches.length !== 1 || n.namedChildren.some(x => x.type === 'finally_clause') || !decl || !decl.childForFieldName('name')) break;
+        return [this.B('try_catch', { TYPE: this.t(decl.childForFieldName('type')), VAR: this.t(decl.childForFieldName('name')) },
+          { TRY: this.body(n.childForFieldName('body')), CATCH: this.body(c.childForFieldName('body')) })];
+      }
       case 'block': return n.namedChildren.flatMap(c => this.st(c));
       case 'local_declaration_statement': {
         const d = n.namedChildren.find(c => c.type === 'variable_declaration');
@@ -219,8 +242,13 @@ const Imp = {
       case 'for_statement': {
         const init = n.childForFieldName('initializer'), cond = n.childForFieldName('condition'), upd = n.childForFieldName('update');
         const d = init && init.type === 'variable_declaration' && this.decls(init);
-        if (d && d.length === 1 && d[0][0] === 'int' && d[0][2] && cond && cond.type === 'binary_expression' && cond.child(1).type === '<'
-            && this.t(cond.childForFieldName('left')) === d[0][1] && upd && this.t(upd).replace(/\s/g, '') === d[0][1] + '++')
+        const cmp = cond && cond.type === 'binary_expression' && cond.child(1).type, step = upd && this.t(upd).replace(/\s/g, '');
+        if (d && d.length === 1 && d[0][0] === 'int' && d[0][2] && ['<', '<=', '>', '>='].includes(cmp) && this.t(cond.childForFieldName('left')) === d[0][1]
+            && [d[0][1] + '++', d[0][1] + '--'].includes(step) && !(cmp === '<' && step.endsWith('++')))
+          return [this.B('for_step', { VAR: d[0][1], CMP: cmp, STEP: step.slice(-2) }, { FROM: this.val('for_step', 'FROM', d[0][2]),
+            TO: this.val('for_step', 'TO', cond.childForFieldName('right')), DO: this.body(n.childForFieldName('body')) })];
+        if (d && d.length === 1 && d[0][0] === 'int' && d[0][2] && cmp === '<'
+            && this.t(cond.childForFieldName('left')) === d[0][1] && step === d[0][1] + '++')
           return [this.B('for_range', { VAR: d[0][1] }, { FROM: this.val('for_range', 'FROM', d[0][2]), TO: this.val('for_range', 'TO', cond.childForFieldName('right')),
             DO: this.body(n.childForFieldName('body')) })];
         break;
@@ -248,10 +276,16 @@ const Imp = {
       case 'continue_statement': return [this.B('controls_flow_statements', { FLOW: 'CONTINUE' })];
       case 'yield_statement': {
         const x = n.namedChildren[0];
-        if (x && x.type === 'null_literal') return [this.B('yield_null')];
-        if (x && x.type === 'object_creation_expression' && this.t(x.childForFieldName('type')) === 'WaitForSeconds') {
-          const a = this.args(x);
-          if (a && a.length === 1) return [this.B('yield_wait', {}, { SEC: this.val('yield_wait', 'SEC', a[0]) })];
+        if (!x) return [this.B('yield_break')];
+        if (x.type === 'null_literal') return [this.B('yield_null')];
+        if (x.type === 'object_creation_expression') {
+          const ty = this.t(x.childForFieldName('type')), a = this.args(x);
+          if (['WaitForSeconds', 'WaitForSecondsRealtime'].includes(ty) && a && a.length === 1) return [this.B('yield_wait', { KIND: ty }, { SEC: this.val('yield_wait', 'SEC', a[0]) })];
+          if (['WaitForEndOfFrame', 'WaitForFixedUpdate'].includes(ty) && a && !a.length) return [this.B('yield_frame', { KIND: ty })];
+          if (['WaitUntil', 'WaitWhile'].includes(ty) && a && a.length === 1 && a[0].type === 'lambda_expression') {
+            const ps = a[0].childForFieldName('parameters'), body = a[0].childForFieldName('body');
+            if (ps && this.flat(ps) === '()' && body && body.type !== 'block') return [this.B('yield_until', { KIND: ty }, { COND: this.val('yield_until', 'COND', body) })];
+          }
         }
         break;
       }
@@ -262,11 +296,20 @@ const Imp = {
     const conds = [], bodies = [];
     let cur = n;
     while (cur && cur.type === 'if_statement') { conds.push(cur.childForFieldName('condition')); bodies.push(cur.childForFieldName('consequence')); cur = cur.childForFieldName('alternative'); }
-    if (conds.length === 1 && !cur) { const rc = this.raycast(conds[0], bodies[0]); if (rc) return rc; }
+    if (conds.length === 1 && !cur) { const rc = this.raycast(conds[0], bodies[0]) || this.tryGet(conds[0], bodies[0]); if (rc) return rc; }
     const inputs = {};
     conds.forEach((c, i) => { inputs['IF' + i] = this.val('controls_if', 'IF' + i, c); inputs['DO' + i] = this.body(bodies[i]); });
     if (cur) inputs.ELSE = this.body(cur);
     return this.B('controls_if', {}, inputs, conds.length > 1 || cur ? { elseIfCount: conds.length - 1, hasElse: !!cur } : undefined);
+  },
+  tryGet(cond, body) {
+    if (cond.type !== 'invocation_expression') return null;
+    const fn = cond.childForFieldName('function'), a = cond.childForFieldName('arguments').namedChildren.filter(c => c.type === 'argument');
+    const name = fn.type === 'identifier' ? this.t(fn) : fn.type === 'member_access_expression' ? this.t(fn.childForFieldName('name')) : '';
+    const m = a.length === 1 && this.flat(a[0]).match(/^out\s+([\w.<>]+)\s+(\w+)$/);
+    if (name !== 'TryGetComponent' || !m) return null;
+    return this.B('try_get_component_if', { TYPE: m[1], VAR: m[2] }, { OBJ: fn.type === 'member_access_expression' && this.val('try_get_component_if', 'OBJ', fn.childForFieldName('expression')),
+      DO: this.body(body) });
   },
   raycast(cond, body) {
     if (cond.type !== 'invocation_expression' || this.path(cond.childForFieldName('function')) !== 'Physics.Raycast') return null;
@@ -285,7 +328,9 @@ const Imp = {
       const L = e.childForFieldName('left'), R = e.childForFieldName('right');
       const op = this.t(e.namedChildren.find(c => c.type === 'assignment_operator') || e.child(1)), lp = this.path(L);
       let m;
-      if (lp && op === '=' && (m = lp.match(/^transform\.(position|localPosition|localScale|eulerAngles)$/)))
+      if (lp === 'Cursor.lockState' && op === '=' && (m = (this.path(R) || '').match(/^CursorLockMode\.(None|Locked|Confined)$/))) return this.B('cursor_lock', { MODE: m[1] });
+      if (lp === 'Gizmos.color' && op === '=') return this.B('gizmos_color', {}, { VALUE: this.val('gizmos_color', 'VALUE', R) });
+      if (lp && op === '=' && (m = lp.match(/^transform\.(\w+)$/)) && TF_SET.includes(m[1]))
         return this.B('transform_set', { PROP: m[1] }, { VALUE: this.val('transform_set', 'VALUE', R) });
       if (lp && op === '=' && (m = lp.match(/^(.+)\.text$/)))
         return this.B('ui_set_text', {}, { OBJ: { block: this.pathBlock(m[1]) }, VALUE: this.val('ui_set_text', 'VALUE', R) });
@@ -321,13 +366,22 @@ const Imp = {
       if (fp === 'Destroy' && (k === 1 || k === 2)) return this.B('destroy', {}, { OBJ: V('destroy', 'OBJ', a[0]), DELAY: V('destroy', 'DELAY', a[1]) });
       if (fp === 'StartCoroutine' && k === 1 && a[0].type === 'invocation_expression') {
         const inner = this.path(a[0].childForFieldName('function'));
-        if (inner && /^\w+$/.test(inner) && !this.argText(a[0])) return this.B('start_coroutine', { NAME: inner });
+        if (inner && /^\w+$/.test(inner)) return this.B('start_coroutine', { NAME: inner, ARGS: this.argText(a[0]) });
       }
       if (fp === 'Invoke' && k === 2 && this.str(a[0]) !== null) return this.B('invoke_stmt', { NAME: this.str(a[0]) }, { SEC: V('invoke_stmt', 'SEC', a[1]) });
       if (fp === 'SceneManager.LoadScene' && k === 1) return this.B('load_scene', {}, { SCENE: V('load_scene', 'SCENE', a[0]) });
       if ((m = fp.match(/^PlayerPrefs\.(SetInt|SetFloat|SetString)$/)) && k === 2 && this.str(a[0]) !== null)
         return this.B('prefs_set', { FN: m[1], KEY: this.str(a[0]) }, { VALUE: V('prefs_set', 'VALUE', a[1]) });
       if (fp === 'PlayerPrefs.Save' && k === 0) return this.B('prefs_save');
+      if (fp === 'InvokeRepeating' && k === 3 && this.str(a[0]) !== null)
+        return this.B('invoke_repeating', { NAME: this.str(a[0]) }, { DELAY: V('invoke_repeating', 'DELAY', a[1]), RATE: V('invoke_repeating', 'RATE', a[2]) });
+      if (fp === 'StopAllCoroutines' && k === 0) return this.B('stop_coroutines');
+      if (fp === 'DontDestroyOnLoad' && k === 1) return this.B('dont_destroy', {}, { OBJ: V('dont_destroy', 'OBJ', a[0]) });
+      if (fp === 'AudioSource.PlayClipAtPoint' && k === 2) return this.B('audio_clip_at_point', {}, { CLIP: V('audio_clip_at_point', 'CLIP', a[0]), POS: V('audio_clip_at_point', 'POS', a[1]) });
+      if ((m = fp.match(/^Gizmos\.(DrawWireSphere|DrawSphere)$/)) && k === 2) return this.B('gizmos_sphere', { FN: m[1] }, { CENTER: V('gizmos_sphere', 'CENTER', a[0]), R: V('gizmos_sphere', 'R', a[1]) });
+      if ((m = fp.match(/^Gizmos\.(DrawWireCube|DrawCube)$/)) && k === 2) return this.B('gizmos_cube', { FN: m[1] }, { CENTER: V('gizmos_cube', 'CENTER', a[0]), SIZE: V('gizmos_cube', 'SIZE', a[1]) });
+      if (fp === 'Gizmos.DrawLine' && k === 2) return this.B('gizmos_line', {}, { A: V('gizmos_line', 'A', a[0]), B: V('gizmos_line', 'B', a[1]) });
+      if (fp === 'Debug.DrawLine' && (k === 2 || k === 3)) return this.B('draw_line', {}, { A: V('draw_line', 'A', a[0]), B: V('draw_line', 'B', a[1]), COLOR: V('draw_line', 'COLOR', a[2]) });
       if (fp === 'Application.Quit' && k === 0) return this.B('app_quit');
       if (fp === 'Debug.DrawRay' && k === 3) return this.B('draw_ray', {}, { ORIGIN: V('draw_ray', 'ORIGIN', a[0]), DIR: V('draw_ray', 'DIR', a[1]), COLOR: V('draw_ray', 'COLOR', a[2]) });
     }
@@ -347,33 +401,42 @@ const Imp = {
         case 'Sort': case 'Reverse': if (k === 0) return this.B('list_order', { OP: nm }, on('list_order', 'LIST')); break;
         case 'SetActive': if (k === 1) return this.B('set_active', {}, { ...on('set_active'), BOOL: V('set_active', 'BOOL', a[0]) }); break;
         case 'AddForce': {
+          const fm2 = k === 2 && (this.t(a[1]).match(/^ForceMode2D\.(Force|Impulse)$/) || [])[1];
+          if (fm2) return this.B('rb2d_addforce', { MODE: fm2 }, { ...on('rb2d_addforce', 'RB'), VEC: V('rb2d_addforce', 'VEC', a[0]) });
           const fm = k === 2 && (this.t(a[1]).match(/^ForceMode\.(Force|Impulse|VelocityChange|Acceleration)$/) || [])[1];
           if (fm) return this.B('rb_addforce', { MODE: fm || 'Force' }, { ...on('rb_addforce', 'RB'), VEC: V('rb_addforce', 'VEC', a[0]) });
           break;
         }
-        case 'Play': case 'Stop': case 'Pause': case 'UnPause': if (k === 0) return this.B('audio_play', { FN: nm }, on('audio_play')); break;
+        case 'Play': case 'Stop': case 'Pause': case 'UnPause':
+          if (k === 0) return this.B('audio_play', { FN: nm }, on('audio_play'));
+          if (nm === 'Play' && k === 1 && this.str(a[0]) !== null) return this.B('anim_play', { NAME: this.str(a[0]) }, on('anim_play'));
+          break;
         case 'PlayOneShot': if (k === 1) return this.B('audio_oneshot', {}, { ...on('audio_oneshot'), CLIP: V('audio_oneshot', 'CLIP', a[0]) }); break;
         case 'SetTrigger': if (k === 1 && this.str(a[0]) !== null) return this.B('anim_trigger', { NAME: this.str(a[0]) }, on('anim_trigger')); break;
         case 'SetBool': case 'SetFloat': case 'SetInteger':
           if (k === 2 && this.str(a[0]) !== null) return this.B('anim_set', { FN: nm, NAME: this.str(a[0]) }, { ...on('anim_set'), VALUE: V('anim_set', 'VALUE', a[1]) });
           break;
         case 'AddListener':
+          if (k === 1 && tgt.type === 'member_access_expression' && this.t(tgt.childForFieldName('name')) === 'onClick' && a[0].type === 'lambda_expression')
+            return this.B('button_listener_lambda', {}, { OBJ: V('button_listener_lambda', 'OBJ', tgt.childForFieldName('expression')), FN: V('button_listener_lambda', 'FN', a[0]) });
           if (k === 1 && tgt.type === 'member_access_expression' && this.t(tgt.childForFieldName('name')) === 'onClick' && /^\w+$/.test(this.t(a[0])))
             return this.B('button_listener', { NAME: this.t(a[0]) }, { OBJ: V('button_listener', 'OBJ', tgt.childForFieldName('expression')) });
           break;
       }
     }
-    if (fp) return this.B('method_call', { NAME: fp, ARGS: this.argText(e) });
     const x = this.callExpr(e);
-    return x ? this.B('expr_stmt', {}, { EXPR: { block: x } }) : null;
+    if (x && (x.type !== 'method_call_expr' || !fp)) return this.B('expr_stmt', {}, { EXPR: { block: x } });
+    return fp ? this.B('method_call', { NAME: fp, ARGS: this.argText(e) }) : null;
   },
   pathBlock(p) {
     let m;
     if ((m = p.match(/^Time\.(deltaTime|time|fixedDeltaTime|timeScale|unscaledDeltaTime)$/))) return this.B('time_value', { PROP: m[1] });
     if ((m = p.match(/^Vector3\.(zero|one|up|down|left|right|forward|back)$/))) return this.B('vector3_const', { DIR: m[1] });
-    if ((m = p.match(/^transform\.(position|rotation|localScale|forward|right|up)$/))) return this.B('transform_get', { PROP: m[1] });
+    if ((m = p.match(/^transform\.(\w+)$/)) && TF_GET.includes(m[1])) return this.B('transform_get', { PROP: m[1] });
+    if ((m = p.match(/^Vector2\.(zero|one|up|down|left|right)$/))) return this.B('vector2_const', { DIR: m[1] });
+    if ((m = p.match(/^Mathf\.(\w+)$/)) && MATH_CONST.includes(m[1])) return this.B('math_const', { C: m[1] });
     if ((m = p.match(/^Color\.(white|black|red|green|blue|yellow|cyan|magenta|gray|clear)$/))) return this.B('color_const', { COLOR: m[1] });
-    if (['Input.mousePosition', 'Camera.main', 'Screen.width', 'Screen.height'].includes(p)) return this.B('unity_value', { V: p });
+    if (p in UNITY_VALUES) return this.B('unity_value', { V: p });
     return this.B('var_get', { NAME: p });
   },
   ex(n) {
@@ -387,6 +450,19 @@ const Imp = {
       if (fm) return this.B('number_f', { NUM: +fm[1] });
     }
     if (T === 'string_literal' && this.str(n) !== null) return this.B('text', { TEXT: this.str(n) });
+    if (T === 'interpolated_string_expression' && /^\$"[^\n]*"$/.test(txt)) return this.B('interp_string', { TEXT: txt.slice(2, -1) });
+    if (T === 'lambda_expression') {
+      const ps = n.childForFieldName('parameters'), body = n.childForFieldName('body');
+      const PARAMS = !ps ? '' : ps.type === 'parameter_list' ? this.flat(ps).slice(1, -1).trim() : this.t(ps);
+      if (body && body.type === 'block') return this.B('lambda_block', { PARAMS }, { BODY: this.body(body) });
+      if (body) return this.B('lambda_expr', { PARAMS }, { VALUE: V('lambda_expr', 'VALUE', body) });
+    }
+    if (T === 'is_pattern_expression') {
+      const pat = n.childForFieldName('pattern'), x = pat && pat.type === 'constant_pattern' && pat.namedChildren[0];
+      if (x && ['identifier', 'qualified_name', 'generic_name', 'predefined_type'].includes(x.type))
+        return this.B('is_type', { TYPE: this.t(x) }, { VALUE: V('is_type', 'VALUE', n.childForFieldName('expression')) });
+    }
+    if (T === 'as_expression') return this.B('as_expr', { TYPE: this.t(n.childForFieldName('right')) }, { VALUE: V('as_expr', 'VALUE', n.childForFieldName('left')) });
     if (T === 'boolean_literal') return this.B('logic_boolean', { BOOL: txt === 'true' ? 'TRUE' : 'FALSE' });
     if (T === 'null_literal') return this.B('logic_null');
     const p = this.path(n);
@@ -408,6 +484,7 @@ const Imp = {
       if (ar) return this.B('math_arithmetic', { OP: ar }, { A: V('math_arithmetic', 'A', L), B: V('math_arithmetic', 'B', R) });
       if (op === '%') return this.B('math_modulo', {}, { DIVIDEND: V('math_modulo', 'DIVIDEND', L), DIVISOR: V('math_modulo', 'DIVISOR', R) });
       if (cmp) return this.B('logic_compare', { OP: cmp }, { A: V('logic_compare', 'A', L), B: V('logic_compare', 'B', R) });
+      if (op === '??') return this.B('null_coalesce', {}, { A: V('null_coalesce', 'A', L), B: V('null_coalesce', 'B', R) });
       if (op === '&&' || op === '||') return this.B('logic_operation', { OP: op === '&&' ? 'AND' : 'OR' }, { A: V('logic_operation', 'A', L), B: V('logic_operation', 'B', R) });
     }
     if (T === 'conditional_expression')
@@ -415,6 +492,11 @@ const Imp = {
         ELSE: V('logic_ternary', 'ELSE', n.childForFieldName('alternative')) });
     if (T === 'cast_expression' && ['int', 'float'].includes(this.t(n.childForFieldName('type'))))
       return this.B('cast_expr', { TYPE: this.t(n.childForFieldName('type')) }, { VALUE: V('cast_expr', 'VALUE', n.childForFieldName('value')) });
+    if (T === 'cast_expression') return this.B('cast_any', { TYPE: this.t(n.childForFieldName('type')) }, { VALUE: V('cast_any', 'VALUE', n.childForFieldName('value')) });
+    if (T === 'array_creation_expression' && n.namedChildren.length === 2 && n.namedChildren[1].type === 'initializer_expression') {
+      const at = n.namedChildren[0], rank = at.childForFieldName('rank');
+      if (rank && !rank.namedChildren.length) return this.B('array_init', { TYPE: this.t(at.childForFieldName('type')), ITEMS: this.flat(n.namedChildren[1]).slice(1, -1).trim() });
+    }
     if (T === 'element_access_expression') {
       const a = n.childForFieldName('subscript').namedChildren.filter(c => c.type === 'argument');
       if (a.length === 1) return this.B('list_get', {}, { LIST: V('list_get', 'LIST', n.childForFieldName('expression')), INDEX: V('list_get', 'INDEX', a[0].namedChildren[0]) });
@@ -443,10 +525,18 @@ const Imp = {
     if (T === 'object_creation_expression' && !n.namedChildren.some(c => c.type === 'initializer_expression')) {
       const ty = this.t(n.childForFieldName('type')), a = this.args(n);
       let m;
+      if (ty === 'Vector2' && a && a.length === 2) return this.B('vector2_new', {}, { X: V('vector2_new', 'X', a[0]), Y: V('vector2_new', 'Y', a[1]) });
+      if (ty === 'Color' && a && (a.length === 3 || a.length === 4))
+        return this.B('color_new', {}, { R: V('color_new', 'R', a[0]), G: V('color_new', 'G', a[1]), B: V('color_new', 'B', a[2]), A: V('color_new', 'A', a[3]) });
       if (ty === 'Vector3' && a && a.length === 3) return this.B('vector3_new', {}, { X: V('vector3_new', 'X', a[0]), Y: V('vector3_new', 'Y', a[1]), Z: V('vector3_new', 'Z', a[2]) });
       if ((m = ty.match(/^List<(.+)>$/)) && a && !a.length) return this.B('list_new', { TYPE: m[1] });
       if ((m = ty.match(/^Dictionary<([^,<>]+),\s*([^,]+)>$/)) && a && !a.length) return this.B('dict_new', { KEY: m[1].trim(), VAL: m[2].trim() });
       return this.B('new_object', { NAME: ty, ARGS: this.argText(n) });
+    }
+    if (T === 'member_access_expression') {
+      const e = n.childForFieldName('expression'), nm = this.t(n.childForFieldName('name'));
+      if (e.type === 'invocation_expression' && this.path(e.childForFieldName('function')) === 'SceneManager.GetActiveScene' && !this.argText(e) && ['buildIndex', 'name'].includes(nm))
+        return this.B('scene_info', { PROP: nm });
     }
     if (T === 'member_access_expression' && n.childForFieldName('name').type === 'identifier')
       return this.B('prop_get', { PROP: this.t(n.childForFieldName('name')) }, { OBJ: V('prop_get', 'OBJ', n.childForFieldName('expression')) });
@@ -469,13 +559,29 @@ const Imp = {
         const key = (this.path(a[0]) || '').match(/^KeyCode\.(\w+)$/);
         if (key && KEYS.includes(key[1])) return this.B('input_key', { MODE: m[1], KEY: key[1] });
       }
-      if (fp === 'Input.GetAxis' && k === 1 && ['Horizontal', 'Vertical', 'Mouse X', 'Mouse Y', 'Jump'].includes(this.str(a[0]))) return this.B('input_axis', { AXIS: this.str(a[0]) });
+      if ((m = fp.match(/^Input\.(GetAxis|GetAxisRaw)$/)) && k === 1 && ['Horizontal', 'Vertical', 'Mouse X', 'Mouse Y', 'Jump'].includes(this.str(a[0])))
+        return this.B('input_axis', { MODE: m[1], AXIS: this.str(a[0]) });
+      if ((m = fp.match(/^Input\.(GetButton|GetButtonDown|GetButtonUp)$/)) && k === 1 && this.str(a[0]) !== null) return this.B('input_button', { MODE: m[1], NAME: this.str(a[0]) });
+      if ((m = fp.match(/^string\.(IsNullOrEmpty|IsNullOrWhiteSpace)$/)) && k === 1) return this.B('string_check', { FN: m[1] }, { VALUE: V('string_check', 'VALUE', a[0]) });
+      if ((m = fp.match(/^(int|float)\.Parse$/)) && k === 1) return this.B('parse_num', { TYPE: m[1] }, { VALUE: V('parse_num', 'VALUE', a[0]) });
+      if ((m = fp.match(/^Quaternion\.(Slerp|Lerp|RotateTowards)$/)) && k === 3)
+        return this.B('quaternion_lerp', { FN: m[1] }, { A: V('quaternion_lerp', 'A', a[0]), B: V('quaternion_lerp', 'B', a[1]), T: V('quaternion_lerp', 'T', a[2]) });
+      if (fp === 'Quaternion.LookRotation' && k === 1) return this.B('quaternion_look', {}, { DIR: V('quaternion_look', 'DIR', a[0]) });
+      if (fp === 'Quaternion.AngleAxis' && k === 2) return this.B('quaternion_axis', {}, { ANGLE: V('quaternion_axis', 'ANGLE', a[0]), AXIS: V('quaternion_axis', 'AXIS', a[1]) });
+      if (fp === 'Physics2D.Raycast' && k >= 2 && k <= 4)
+        return this.B('raycast2d', {}, { ORIGIN: V('raycast2d', 'ORIGIN', a[0]), DIR: V('raycast2d', 'DIR', a[1]), DIST: V('raycast2d', 'DIST', a[2]), LAYER: V('raycast2d', 'LAYER', a[3]) });
+      if (['Physics2D.OverlapCircle', 'Physics2D.OverlapCircleAll', 'Physics.OverlapSphere'].includes(fp) && (k === 2 || k === 3))
+        return this.B('physics_overlap', { FN: fp }, { POS: V('physics_overlap', 'POS', a[0]), R: V('physics_overlap', 'R', a[1]), LAYER: V('physics_overlap', 'LAYER', a[2]) });
+      if (fp === 'LayerMask.GetMask' && k >= 1 && a.every(x => this.str(x) !== null && !this.str(x).includes(','))) return this.B('layer_mask', { NAMES: a.map(x => this.str(x)).join(', ') });
+      if (fp === 'Instantiate' && k === 1) return this.B('instantiate_one', {}, { PREFAB: V('instantiate_one', 'PREFAB', a[0]) });
+      if (fp === 'Instantiate' && k === 3 && this.t(a[2]) !== 'Quaternion.identity')
+        return this.B('instantiate_rot', {}, { PREFAB: V('instantiate_rot', 'PREFAB', a[0]), POS: V('instantiate_rot', 'POS', a[1]), ROT: V('instantiate_rot', 'ROT', a[2]) });
       if ((m = fp.match(/^Input\.(GetMouseButton(?:Down|Up)?)$/)) && k === 1 && /^[012]$/.test(this.t(a[0]))) return this.B('mouse_button', { MODE: m[1], BTN: this.t(a[0]) });
       if (fp === 'Random.Range' && k === 2) return this.B('random_range', {}, { A: V('random_range', 'A', a[0]), B: V('random_range', 'B', a[1]) });
       if ((m = fp.match(/^Mathf\.(\w+)$/))) {
-        if (k === 1 && ['Abs', 'Sqrt', 'Round', 'Floor', 'Ceil', 'Sin', 'Cos', 'Sign', 'RoundToInt', 'FloorToInt'].includes(m[1])) return this.B('math_func1', { FN: m[1] }, { X: V('math_func1', 'X', a[0]) });
-        if (k === 2 && ['Max', 'Min', 'Pow'].includes(m[1])) return this.B('math_func2', { FN: m[1] }, { A: V('math_func2', 'A', a[0]), B: V('math_func2', 'B', a[1]) });
-        if (k === 3 && ['Clamp', 'Lerp'].includes(m[1])) return this.B('math_func3', { FN: m[1] }, { A: V('math_func3', 'A', a[0]), B: V('math_func3', 'B', a[1]), C: V('math_func3', 'C', a[2]) });
+        if (k === 1 && MATH1.includes(m[1])) return this.B('math_func1', { FN: m[1] }, { X: V('math_func1', 'X', a[0]) });
+        if (k === 2 && MATH2.includes(m[1])) return this.B('math_func2', { FN: m[1] }, { A: V('math_func2', 'A', a[0]), B: V('math_func2', 'B', a[1]) });
+        if (k === 3 && MATH3.includes(m[1])) return this.B('math_func3', { FN: m[1] }, { A: V('math_func3', 'A', a[0]), B: V('math_func3', 'B', a[1]), C: V('math_func3', 'C', a[2]) });
       }
       if ((m = fp.match(/^Vector3\.(Distance|Dot|Cross)$/)) && k === 2) return this.B('vector3_func', { FN: m[1] }, { A: V('vector3_func', 'A', a[0]), B: V('vector3_func', 'B', a[1]) });
       if ((m = fp.match(/^Vector3\.(Lerp|MoveTowards)$/)) && k === 3)
@@ -492,6 +598,7 @@ const Imp = {
       if (nm === 'Contains' && k === 1) return this.B('list_contains', {}, { LIST: V('list_contains', 'LIST', tgt), VALUE: V('list_contains', 'VALUE', a[0]) });
       if (nm === 'ContainsKey' && k === 1) return this.B('dict_contains', {}, { LIST: V('dict_contains', 'LIST', tgt), KEY: V('dict_contains', 'KEY', a[0]) });
       if (nm === 'IndexOf' && k === 1) return this.B('list_index_of', {}, { LIST: V('list_index_of', 'LIST', tgt), VALUE: V('list_index_of', 'VALUE', a[0]) });
+      if (nm === 'ToString' && k === 1 && this.str(a[0]) !== null) return this.B('to_string_fmt', { FMT: this.str(a[0]) }, { VALUE: V('to_string_fmt', 'VALUE', tgt) });
       if (nm === 'ToString' && k === 0) return this.B('to_string', {}, { VALUE: V('to_string', 'VALUE', tgt) });
     }
     if (fp) return this.B('method_call_expr', { NAME: fp, ARGS: this.argText(n) });

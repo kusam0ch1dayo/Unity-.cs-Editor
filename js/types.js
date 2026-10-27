@@ -76,6 +76,38 @@ MEMBERS.GameObject['AddComponent()'] = '?';
 const MONO = { ...COMP, enabled: 'bool', 'Invoke()': 'void', 'InvokeRepeating()': 'void', 'CancelInvoke()': 'void', 'StartCoroutine()': '?',
   'Instantiate()': '?', 'Destroy()': 'void', 'print()': 'void' };
 
+// よく使う Unity API (第2弾)
+Object.assign(STATICS.Mathf, { Infinity: 'float', NegativeInfinity: 'float', Deg2Rad: 'float', Rad2Deg: 'float', Epsilon: 'float', 'Approximately()': 'bool' },
+  Object.fromEntries([...MATH1, ...MATH2, ...MATH3].map(n => [n + '()', /ToInt$/.test(n) ? 'int' : 'float'])));
+Object.assign(STATICS.Random, { insideUnitCircle: 'Vector2', insideUnitSphere: 'Vector3', onUnitSphere: 'Vector3', rotation: 'Quaternion' });
+Object.assign(STATICS.Input, { anyKey: 'bool', anyKeyDown: 'bool', touchCount: 'int', 'GetAxisRaw()': 'float', 'GetButton()': 'bool', 'GetButtonDown()': 'bool',
+  'GetButtonUp()': 'bool', 'GetMouseButton()': 'bool', 'GetMouseButtonUp()': 'bool', 'GetTouch()': '?' });
+Object.assign(STATICS.Quaternion, { 'Slerp()': 'Quaternion', 'Lerp()': 'Quaternion', 'RotateTowards()': 'Quaternion', 'AngleAxis()': 'Quaternion', 'Inverse()': 'Quaternion' });
+Object.assign(STATICS.Time, { frameCount: 'int', realtimeSinceStartup: 'float' });
+Object.assign(STATICS.Vector3, { 'MoveTowards()': 'Vector3', 'Normalize()': 'Vector3', 'Angle()': 'float', 'ClampMagnitude()': 'Vector3', 'Slerp()': 'Vector3', 'Reflect()': 'Vector3' });
+Object.assign(STATICS, {
+  Physics2D: { 'Raycast()': 'RaycastHit2D', 'OverlapCircle()': 'Collider2D', 'OverlapCircleAll()': 'Collider2D[]', 'OverlapBox()': 'Collider2D', gravity: 'Vector2' },
+  LayerMask: { 'GetMask()': 'int', 'NameToLayer()': 'int', 'LayerToName()': 'string' },
+  Cursor: { lockState: 'CursorLockMode', visible: 'bool' },
+  CursorLockMode: { None: 'CursorLockMode', Locked: 'CursorLockMode', Confined: 'CursorLockMode' },
+  ForceMode2D: { Force: 'ForceMode2D', Impulse: 'ForceMode2D' },
+  Gizmos: { color: 'Color', 'DrawWireSphere()': 'void', 'DrawSphere()': 'void', 'DrawWireCube()': 'void', 'DrawCube()': 'void', 'DrawLine()': 'void', 'DrawRay()': 'void' },
+  AudioSource: { 'PlayClipAtPoint()': 'void' },
+  string: { Empty: 'string', 'IsNullOrEmpty()': 'bool', 'IsNullOrWhiteSpace()': 'bool', 'Join()': 'string', 'Format()': 'string' },
+  int: { MaxValue: 'int', MinValue: 'int', 'Parse()': 'int', 'TryParse()': 'bool' },
+  float: { MaxValue: 'float', MinValue: 'float', 'Parse()': 'float', 'TryParse()': 'bool' },
+});
+Object.assign(STATICS.Physics, { 'OverlapSphere()': 'Collider[]' });
+Object.assign(STATICS.SceneManager, { 'GetActiveScene()': 'Scene' });
+Object.assign(STATICS.Debug, { 'DrawLine()': 'void', 'DrawRay()': 'void' });
+MEMBERS.Scene = { name: 'string', buildIndex: 'int', path: 'string' };
+Object.assign(MEMBERS.Transform, { localRotation: 'Quaternion', localEulerAngles: 'Vector3', lossyScale: 'Vector3', childCount: 'int', 'SetParent()': 'void',
+  'GetChild()': 'Transform', 'Find()': 'Transform', 'TransformDirection()': 'Vector3', 'TransformPoint()': 'Vector3', 'InverseTransformPoint()': 'Vector3' });
+Object.assign(MONO, { 'DontDestroyOnLoad()': 'void', 'StopAllCoroutines()': 'void', 'StopCoroutine()': 'void', 'FindObjectOfType()': '?', 'TryGetComponent()': 'bool',
+  'GetComponentInChildren()': '?', 'GetComponentInParent()': '?', 'GetComponents()': '?', 'IsInvoking()': 'bool' });
+UNITY_TYPES.push('Scene', 'CursorLockMode', 'ForceMode2D', 'Vector2Int', 'Vector3Int', 'Rect', 'Bounds', 'Texture2D', 'AnimationCurve', 'Coroutine',
+  'Exception', 'System.Exception', 'Action', 'System.Action', 'Object');
+
 let MODEL = new Map();
 function model() {
   const classes = new Map();
@@ -145,8 +177,10 @@ function scopeOf(b) {
       continue;
     }
     if (p.type === 'list_foreach') add(f(p, 'VAR'), f(p, 'TYPE').trim() === 'var' ? elemOf(typeOf(p.getInputTargetBlock('LIST'))) : f(p, 'TYPE').trim());
-    else if (p.type === 'for_range') add(f(p, 'VAR'), 'int');
+    else if (p.type === 'for_range' || p.type === 'for_step') add(f(p, 'VAR'), 'int');
     else if (p.type === 'raycast_if' || p.type === 'raycast_mouse_if') add(f(p, 'HIT'), 'RaycastHit');
+    else if (p.type === 'try_catch' || p.type === 'try_get_component_if') add(f(p, 'VAR'), f(p, 'TYPE').trim());
+    else if (p.type === 'lambda_block') params(f(p, 'PARAMS')).forEach(([t, n]) => add(n, t));
     else if (['method_def', 'constructor_def', 'coroutine_def'].includes(p.type) && !method) {
       method = { ret: p.type === 'method_def' ? f(p, 'RET').trim() : p.type === 'coroutine_def' ? 'IEnumerator' : 'void' };
       params(f(p, 'PARAMS')).forEach(([t, n]) => add(n, t));
@@ -209,8 +243,8 @@ function typeOf(b) {
     case 'cast_expr': return f(b, 'TYPE');
     case 'to_string': return 'string';
     case 'math_func1': return /ToInt$/.test(f(b, 'FN')) ? 'int' : 'float';
-    case 'math_func2': return f(b, 'FN') === 'Pow' ? 'float' : arithType(A('A'), A('B'));
-    case 'math_func3': return f(b, 'FN') === 'Lerp' ? 'float' : arithType(arithType(A('A'), A('B')), A('C'));
+    case 'math_func2': return ['Max', 'Min'].includes(f(b, 'FN')) ? arithType(A('A'), A('B')) : 'float';
+    case 'math_func3': return f(b, 'FN') === 'Clamp' ? arithType(arithType(A('A'), A('B')), A('C')) : 'float';
     case 'math_modulo': return arithType(A('DIVIDEND'), A('DIVISOR'));
     case 'logic_ternary': return A('THEN');
     case 'vector3_func': return f(b, 'FN') === 'Cross' ? 'Vector3' : 'float';
@@ -222,7 +256,22 @@ function typeOf(b) {
     case 'add_component': return f(b, 'TYPE').trim();
     case 'list_index_of': return 'int';
     case 'hit_get': return MEMBERS.RaycastHit[f(b, 'PROP')];
-    case 'unity_value': return { 'Input.mousePosition': 'Vector3', 'Camera.main': 'Camera', 'Screen.width': 'int', 'Screen.height': 'int' }[f(b, 'V')];
+    case 'unity_value': return UNITY_VALUES[f(b, 'V')];
+    case 'interp_string': case 'to_string_fmt': return 'string';
+    case 'string_check': case 'is_type': case 'input_button': return 'bool';
+    case 'parse_num': return f(b, 'TYPE');
+    case 'math_const': return 'float';
+    case 'cast_any': case 'as_expr': return f(b, 'TYPE').trim();
+    case 'null_coalesce': return A('A');
+    case 'array_init': return f(b, 'TYPE').trim() + '[]';
+    case 'vector2_new': case 'vector2_const': return 'Vector2';
+    case 'quaternion_lerp': case 'quaternion_look': case 'quaternion_axis': return 'Quaternion';
+    case 'color_new': return 'Color';
+    case 'instantiate_one': case 'instantiate_rot': return A('PREFAB');
+    case 'scene_info': return f(b, 'PROP') === 'name' ? 'string' : 'int';
+    case 'raycast2d': return 'RaycastHit2D';
+    case 'physics_overlap': { const [cls, fn] = f(b, 'FN').split('.'); return STATICS[cls][fn + '()']; }
+    case 'layer_mask': return 'int';
     case 'prop_get': { const mem = membersOf(A('OBJ')); return (mem && mem[f(b, 'PROP').trim()]) || '?'; }
     case 'prefs_get': return { GetInt: 'int', GetFloat: 'float', GetString: 'string' }[f(b, 'FN')];
     case 'dict_new': return `Dictionary<${f(b, 'KEY').trim()}, ${f(b, 'VAL').trim()}>`;
@@ -242,6 +291,8 @@ function assignable(t, s) {
   if (!knownType(s)) return true;
   if (s === 'int') return ['float', 'double', 'long'].includes(t);
   if (s === 'float') return t === 'double';
+  if ((t === 'Vector2' && s === 'Vector3') || (t === 'Vector3' && s === 'Vector2')) return true;
+  if ((t === 'int' && s === 'LayerMask') || (t === 'LayerMask' && s === 'int')) return true;
   if (t === 'Component' && (COMPONENTS.includes(s) || s === 'MonoBehaviour')) return true;
   if (t === 'Collider' && /Collider$/.test(s)) return true;
   const c = MODEL.get(s);

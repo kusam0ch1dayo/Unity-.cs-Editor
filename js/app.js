@@ -30,8 +30,8 @@ function hl(code) {
 let code = '', fileName = 'Script.cs';
 function update() {
   code = cs.workspaceToCode(ws);
-  const mono = ws.getTopBlocks(true).find(b => b.type === 'class_def' && f(b, 'BASE').trim() === 'MonoBehaviour')
-            || ws.getTopBlocks(true).find(b => b.type === 'class_def');
+  const mono = ws.getAllBlocks(true).find(b => b.type === 'class_def' && f(b, 'BASE').trim() === 'MonoBehaviour')
+            || ws.getAllBlocks(true).find(b => b.type === 'class_def');
   fileName = (mono ? f(mono, 'NAME') : 'Script') + '.cs';
   document.getElementById('fname').textContent = fileName;
   const issues = [...syntaxErrors(code), ...check()];
