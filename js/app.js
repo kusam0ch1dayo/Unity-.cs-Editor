@@ -40,6 +40,7 @@ function update() {
     : `<div class="ok">${tr('✔ エラーはありません')}</div>`) + (tsState ? `<div><small>${tr(tsState)}</small></div>` : '');
   document.getElementById('undo').disabled = !ws.getUndoStack().length;
   document.getElementById('redo').disabled = !ws.getRedoStack().length;
+  if (typeof refreshShortcuts === 'function') refreshShortcuts();
   highlightBlock(selectedId);
   if (typeof saveProject === 'function') saveProject();
 }

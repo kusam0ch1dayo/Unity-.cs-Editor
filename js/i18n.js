@@ -12,6 +12,7 @@ const I18N = {
   '新しいタブで開く': 'Open in a new tab', '今のブロックに追加する': 'Add to the current blocks', 'キャンセル': 'Cancel', 'ブロックに変換': 'Convert to blocks',
   'ブロック追加の依頼文': 'Block request', 'この文章をコピーして Claude のセッションに貼り付けると、足りないブロックをまとめて追加できます。': 'Copy this text and paste it into a Claude session to have the missing blocks added.',
   '閉じる': 'Close', '.md 保存': 'Save .md', 'よく作るスクリプトを新しいタブで開きます。開いたあとは自由に編集できます。': 'Open a common script in a new tab. You can edit it freely afterwards.',
+  '⚙ 設定': '⚙ Settings',
   '📚 学ぶ': '📚 Learn', '🔰 かんたん': '🔰 Beginner', 'よく使うブロックだけ表示 (かんたんモード)': 'Show only common blocks (beginner mode)', 'ヘルプ': 'Help', 'ヒント': 'Hints',
   // ---- 画面の動き (app.js など)
   '行 {0}': 'Line {0}', 'クリックで修正': 'Click to fix', '✔ エラーはありません': '✔ No errors', 'コピー済': 'Copied', 'コピー失敗': 'Copy failed',

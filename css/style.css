@@ -113,3 +113,43 @@ pre { margin: 0; padding: 12px 16px; flex: 1; overflow: auto; color: var(--code-
 .tutor-foot .wait { opacity: .7; }
 ul.tips { margin: 4px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
 .welcome-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* ヘッダー: ショートカットとメニュー */
+#shortcuts { display: flex; gap: 6px; flex-wrap: wrap; }
+#shortcuts button, #menus button { display: inline-flex; align-items: center; gap: 6px; }
+#menus { display: flex; gap: 4px; padding-left: 8px; border-left: 1px solid var(--border); }
+#menus button { padding: 6px 9px; font-size: 15px; }
+button.pressed { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ic { display: inline-block; min-width: 1.2em; text-align: center; }
+@media (max-width: 1100px) { #shortcuts .lb { display: none; } }
+.menu-panel { position: fixed; z-index: 1000; min-width: 240px; background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 4px; }
+.menu-title { font-size: 11px; opacity: .6; padding: 6px 10px 4px; }
+.menu-panel button { display: flex; width: 100%; align-items: center; gap: 10px; border: 0; background: transparent; padding: 7px 10px; text-align: left; border-radius: 6px; }
+.menu-panel button:hover:not(:disabled) { background: var(--bg); }
+.menu-panel .lb { flex: 1; }
+.menu-panel .kb { font-size: 11px; opacity: .55; }
+/* 設定画面 */
+#settingsDlg { width: min(560px, calc(100vw - 32px)); }
+.settings-head { display: flex; align-items: center; justify-content: space-between; }
+.settings-head h2 { margin: 0; }
+#settingsBody { max-height: 70vh; overflow: auto; }
+#settingsBody section { margin-top: 14px; }
+#settingsBody h3 { font-size: 13px; margin: 0 0 6px; opacity: .8; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.set-row select { font: inherit; padding: 4px 6px; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; }
+.set-group { font-size: 12px; font-weight: 600; margin: 12px 0 2px; }
+.set-row.sc label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.order { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; opacity: .85; }
+.order button { padding: 1px 7px; font-size: 12px; }
+/* ヘッダーは 1 段。ショートカットが入りきらないときはアイコンだけにする */
+header { flex-wrap: nowrap; }
+header h1 { flex: none; white-space: nowrap; }
+#search { flex: 0 1 200px; min-width: 90px; }
+#shortcuts { flex: 1 1 auto; min-width: 0; justify-content: flex-end; flex-wrap: nowrap; overflow: hidden; }
+#shortcuts button { flex: none; }
+#shortcuts.compact .lb { display: none; }
+#menus { flex: none; }
+@media (max-width: 700px) { header h1 small { display: none; } }
+#shortcuts { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+#shortcuts::-webkit-scrollbar { display: none; }
