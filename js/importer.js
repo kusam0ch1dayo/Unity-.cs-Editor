@@ -237,7 +237,7 @@ const Imp = {
         if (!d || n.namedChildren.some(c => c.type === 'modifier') || /^(using|const)\b/.test(this.t(n))) break;
         return this.decls(d).map(([type, name, init]) => this.B('var_local', { TYPE: type, NAME: name }, { VALUE: this.val('var_local', 'VALUE', init) }));
       }
-      case 'expression_statement': { const b = this.exprStmt(n.namedChildren[0]); if (b) return [b]; break; }
+      case 'expression_statement': { const b = this.packMatch(n, false) || this.exprStmt(n.namedChildren[0]); if (b) return [b]; break; }
       case 'if_statement': return [this.ifSt(n)];
       case 'for_statement': {
         const init = n.childForFieldName('initializer'), cond = n.childForFieldName('condition'), upd = n.childForFieldName('update');
@@ -439,9 +439,12 @@ const Imp = {
     if (p in UNITY_VALUES) return this.B('unity_value', { V: p });
     return this.B('var_get', { NAME: p });
   },
+  packMatch() { return null; },
   ex(n) {
     const T = n.type, txt = this.t(n), V = (t, i, x) => this.val(t, i, x);
     if (T === 'parenthesized_expression') return this.ex(n.namedChildren[0]);
+    const pk = this.packMatch(n, true);
+    if (pk) return pk;
     if (T === 'integer_literal' || T === 'real_literal') {
       if (/^\d+$/.test(txt)) return this.B('math_number', { NUM: +txt });
       const m = txt.match(/^(\d*\.\d+)[fF]?$/);

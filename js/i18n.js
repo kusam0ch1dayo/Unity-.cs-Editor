@@ -12,7 +12,10 @@ const I18N = {
   '新しいタブで開く': 'Open in a new tab', '今のブロックに追加する': 'Add to the current blocks', 'キャンセル': 'Cancel', 'ブロックに変換': 'Convert to blocks',
   'ブロック追加の依頼文': 'Block request', 'この文章をコピーして Claude のセッションに貼り付けると、足りないブロックをまとめて追加できます。': 'Copy this text and paste it into a Claude session to have the missing blocks added.',
   '閉じる': 'Close', '.md 保存': 'Save .md', 'よく作るスクリプトを新しいタブで開きます。開いたあとは自由に編集できます。': 'Open a common script in a new tab. You can edit it freely afterwards.',
-  '⚙ 設定': '⚙ Settings',
+  '⚙ 設定': '⚙ Settings', '拡張パックの形式が正しくありません: {0}': 'Invalid block pack: {0}', '既存のブロックと同じ名前です': 'same name as an existing block',
+  '拡張パック': 'Block packs', 'ブロックを JSON で追加できます。形式は docs/block-packs.md を見てください。': 'Add blocks with JSON. See docs/block-packs.md for the format.',
+  'ブロック': 'blocks', '標準': 'built-in', '削除': 'Delete', 'パックを読み込む (.json)': 'Load a pack (.json)', '拡張パック「{0}」を読み込みました': 'Loaded the block pack "{0}"',
+  '拡張パックを削除して、ページを読み込み直しますか？': 'Delete the block pack and reload the page?',
   '📚 学ぶ': '📚 Learn', '🔰 かんたん': '🔰 Beginner', 'よく使うブロックだけ表示 (かんたんモード)': 'Show only common blocks (beginner mode)', 'ヘルプ': 'Help', 'ヒント': 'Hints',
   // ---- 画面の動き (app.js など)
   '行 {0}': 'Line {0}', 'クリックで修正': 'Click to fix', '✔ エラーはありません': '✔ No errors', 'コピー済': 'Copied', 'コピー失敗': 'Copy failed',

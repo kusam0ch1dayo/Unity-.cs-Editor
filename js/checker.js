@@ -324,6 +324,12 @@ function check() {
       case 'random_range': want(b, 'A', 'float'); want(b, 'B', 'float'); break;
       case 'instantiate': want(b, 'POS', 'Vector3'); break;
     }
+    // 拡張パックのブロック: 定義された型で入力をチェック
+    const pk = typeof PACK_BLOCKS !== 'undefined' && PACK_BLOCKS[b.type];
+    if (pk) for (const [name, spec] of Object.entries(pk.inputs || {})) {
+      if (!b.getInputTargetBlock(name)) { if (spec.required !== false) E(b, '空いているスロットにブロックをつないでください'); }
+      else if (spec.type) want(b, name, spec.type);
+    }
   }
   // ブロックに警告アイコンを付ける
   const byBlock = new Map();

@@ -117,10 +117,16 @@ try { beginner = localStorage.getItem(BEGINNER_KEY) === '1'; } catch (e) {}
 function setBeginner(on) {
   beginner = on;
   try { localStorage.setItem(BEGINNER_KEY, on ? '1' : '0'); } catch (e) {}
-  activeToolbox = on ? { kind: 'categoryToolbox', contents: toolbox.contents.map(c => ({ ...c, contents: c.contents.filter(it => BASIC.has(it.type)) })).filter(c => c.contents.length) } : toolbox;
+  refreshToolbox();
+  document.getElementById('beginner').classList.toggle('pressed', on);
+}
+// ツールボックスを作り直す (かんたんモードの絞り込み + マイブロック)
+function refreshToolbox() {
+  const base = beginner ? toolbox.contents.map(c => ({ ...c, contents: c.contents.filter(it => BASIC.has(it.type)) })).filter(c => c.contents.length) : toolbox.contents;
+  const extra = typeof snippetCategory === 'function' ? snippetCategory() : null;
+  activeToolbox = { kind: 'categoryToolbox', contents: extra ? [...base, extra] : base };
   ws.updateToolbox(activeToolbox);
   searchIndex = null;
-  document.getElementById('beginner').classList.toggle('pressed', on);
 }
 document.getElementById('beginner').onclick = () => {
   setBeginner(!beginner);

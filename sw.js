@@ -4,7 +4,7 @@ const CACHE = 'unity-block-coder-v5';
 const FILES = [
   './', 'index.html', 'css/style.css', 'js/i18n.js', 'js/help-data.js',
   'js/blocks.js', 'js/generator.js', 'js/toolbox.js', 'js/types.js', 'js/checker.js', 'js/autocomplete.js', 'js/importer.js', 'js/app.js',
-  'js/theme.js', 'js/search.js', 'js/refactor.js', 'js/project.js', 'js/templates.js', 'js/learn.js', 'js/menu.js',
+  'js/theme.js', 'js/search.js', 'js/refactor.js', 'js/project.js', 'js/templates.js', 'js/packs.js', 'js/packs/ai-navigation.js', 'js/packs/input-system.js', 'js/learn.js', 'js/menu.js',
   'vendor/blockly/blockly_compressed.js', 'vendor/blockly/blocks_compressed.js', 'vendor/blockly/msg/ja.js', 'vendor/blockly/msg/en.js',
   'vendor/blockly/media/sprites.png', 'vendor/blockly/media/sprites.svg',
   'vendor/tree-sitter/tree-sitter.js', 'vendor/tree-sitter/tree-sitter-wasm.js', 'vendor/tree-sitter/tree-sitter-c_sharp-wasm.js',

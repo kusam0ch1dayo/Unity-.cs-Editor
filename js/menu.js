@@ -127,9 +127,11 @@ function renderSettings() {
         + (pos >= 0 ? `<span class="order">${pos + 1}<button data-up="${a.id}" ${pos ? '' : 'disabled'} title="${pick(['前へ', 'Earlier'])}">↑</button><button data-down="${a.id}" ${pos < shortcuts.length - 1 ? '' : 'disabled'} title="${pick(['後ろへ', 'Later'])}">↓</button></span>` : '')
         + '</div>';
     }).join('')).join('')
-    + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`;
+    + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`
+    + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '');
 }
-document.getElementById('settingsBody').onchange = e => {
+document.getElementById('settingsBody').onchange = async e => {
+  if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   const t = e.target, set = t.dataset.set, sc = t.dataset.sc;
   if (set === 'theme') { themeMode = t.value; try { localStorage.setItem(THEME_KEY, themeMode); } catch (err) {} applyTheme(); }
   if (set === 'lang') return setLang(t.value);
@@ -138,7 +140,9 @@ document.getElementById('settingsBody').onchange = e => {
   if (sc) { shortcuts = t.checked ? [...shortcuts, sc] : shortcuts.filter(x => x !== sc); saveShortcuts(); renderSettings(); }
   refreshShortcuts();
 };
-document.getElementById('settingsBody').onclick = e => {
+document.getElementById('settingsBody').onclick = async e => {
+  if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
+  if (typeof handleSnippetSettings === 'function' && handleSnippetSettings(e)) return;
   const up = e.target.closest('[data-up]')?.dataset.up, down = e.target.closest('[data-down]')?.dataset.down;
   const move = (id, d) => { const i = shortcuts.indexOf(id), j = i + d; [shortcuts[i], shortcuts[j]] = [shortcuts[j], shortcuts[i]]; };
   if (up) move(up, -1);

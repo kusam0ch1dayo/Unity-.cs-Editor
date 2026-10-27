@@ -282,6 +282,7 @@ function typeOf(b) {
     case 'method_call_expr': return resolve(f(b, 'NAME') + '()', scopeOf(b)).type;
     case 'math_arithmetic': case 'text_concat': return arithType(A('A'), A('B'));
   }
+  if (typeof PACK_BLOCKS !== 'undefined' && PACK_BLOCKS[b.type]) return PACK_BLOCKS[b.type].output || '?';
   return '?';
 }
 const VALUE_TYPES = ['int', 'float', 'double', 'bool', 'long', 'char', 'Vector2', 'Vector3', 'Quaternion', 'Color', 'KeyCode'];

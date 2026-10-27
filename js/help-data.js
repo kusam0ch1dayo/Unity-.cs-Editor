@@ -5,6 +5,7 @@ const H = (type, name, desc, extra = {}) => { HELP[type] = { name, desc, ...extr
 const pick = pair => (Array.isArray(pair) ? (window.LANG === 'en' ? pair[1] : pair[0]) : pair);
 function helpUrl(h) {
   if (!h) return '';
+  if (h.u && /^https?:/.test(h.u)) return h.u;
   if (h.u) return window.LANG === 'en' ? `https://docs.unity3d.com/ScriptReference/${h.u}.html` : `https://docs.unity3d.com/ja/current/ScriptReference/${h.u}.html`;
   if (h.c) return `https://learn.microsoft.com/${window.LANG === 'en' ? 'en-us' : 'ja-jp'}/dotnet/csharp/${h.c}`;
   return '';
