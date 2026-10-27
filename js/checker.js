@@ -255,9 +255,15 @@ function check() {
 let tsParser = null, tsState = '構文チェッカー読込中…';
 (async () => {
   try {
-    await TreeSitter.init({ locateFile: n => 'https://unpkg.com/web-tree-sitter@0.20.8/' + n });
+    // wasm も integrity 付きで取得し、中身が変わっていたら読み込まない
+    const wasm = async (url, integrity) => new Uint8Array(await (await fetch(url, { integrity, mode: 'cors' })).arrayBuffer());
+    const [core, csharp] = await Promise.all([
+      wasm('https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.wasm', 'sha384-RDsU+Eu5HnfySRWUjLArZKJr8RyKa4o5yT+AHg8v4nbAkKlcwqFhWX2K9cGpv0Xx'),
+      wasm('https://unpkg.com/tree-sitter-wasms@0.1.11/out/tree-sitter-c_sharp.wasm', 'sha384-Zu0PKAXSrvBd4nClc7FTqf8t09W7uRAWc2YmBIAR034z+1OvlXKfuy2rtJYRK1O7'),
+    ]);
+    await TreeSitter.init({ wasmBinary: core });
     const p = new TreeSitter();
-    p.setLanguage(await TreeSitter.Language.load('https://unpkg.com/tree-sitter-wasms@0.1.11/out/tree-sitter-c_sharp.wasm'));
+    p.setLanguage(await TreeSitter.Language.load(csharp));
     tsParser = p; tsState = '';
   } catch (e) { tsState = '構文チェッカーを読み込めませんでした (意味チェックのみ)'; }
   if (typeof update === 'function') update();
