@@ -1,7 +1,7 @@
 // 起動と画面の操作 (コード表示・保存・取り消し・読み込みダイアログ・読み込みログ)
 // ---------- 起動 ----------
 const ws = Blockly.inject('blocks', {
-  toolbox, renderer: 'zelos', media: 'https://unpkg.com/blockly@11.1.1/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
+  toolbox, renderer: 'zelos', media: 'vendor/blockly/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
   zoom: { controls: true, wheel: false, startScale: 0.75 }, grid: { spacing: 24, length: 2, colour: '#ddd', snap: true },
 });
 const KEY = 'unity-block-coder';
@@ -207,3 +207,6 @@ function renderLog(r) {
   showTab(true);
   return groups.size;
 }
+
+// オフライン対応 (http(s) で開いたときだけ。file:// ではサービスワーカーは使えない)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

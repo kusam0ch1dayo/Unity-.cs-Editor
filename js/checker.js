@@ -289,14 +289,13 @@ function check() {
 
 // ---------- 構文チェック (tree-sitter C# パーサー) ----------
 let tsParser = null, tsState = '構文チェッカー読込中…';
-(async () => {
+// wasm は base64 の JS として同梱 (file:// でも fetch なしで読める)。大きいので画面の表示後に読み込む
+const loadScript = src => new Promise((ok, ng) => document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: ok, onerror: ng })));
+const fromBase64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const tsReady = (async () => {
   try {
-    // wasm も integrity 付きで取得し、中身が変わっていたら読み込まない
-    const wasm = async (url, integrity) => new Uint8Array(await (await fetch(url, { integrity, mode: 'cors' })).arrayBuffer());
-    const [core, csharp] = await Promise.all([
-      wasm('https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.wasm', 'sha384-RDsU+Eu5HnfySRWUjLArZKJr8RyKa4o5yT+AHg8v4nbAkKlcwqFhWX2K9cGpv0Xx'),
-      wasm('https://unpkg.com/tree-sitter-wasms@0.1.11/out/tree-sitter-c_sharp.wasm', 'sha384-Zu0PKAXSrvBd4nClc7FTqf8t09W7uRAWc2YmBIAR034z+1OvlXKfuy2rtJYRK1O7'),
-    ]);
+    await Promise.all([loadScript('vendor/tree-sitter/tree-sitter-wasm.js'), loadScript('vendor/tree-sitter/tree-sitter-c_sharp-wasm.js')]);
+    const core = fromBase64(TS_WASM.core), csharp = fromBase64(TS_WASM.csharp);
     await TreeSitter.init({ wasmBinary: core });
     const p = new TreeSitter();
     p.setLanguage(await TreeSitter.Language.load(csharp));

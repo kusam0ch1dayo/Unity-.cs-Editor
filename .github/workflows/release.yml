@@ -29,7 +29,7 @@ jobs:
         run: |
           name="Unity-Block-Coder-${TAG}"
           mkdir "$name"
-          cp -r index.html css js README.md LICENSE "$name"/
+          cp -r index.html sw.js css js vendor README.md LICENSE "$name"/
           zip -r "$name.zip" "$name"
 
       - name: Create release or attach zip
