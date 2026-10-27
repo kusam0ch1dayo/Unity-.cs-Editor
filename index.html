@@ -26,6 +26,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
   <button id="sample">サンプル読込</button>
   <button id="clear">全消去</button>
   <button id="theme" title="表示テーマ (自動 / ライト / ダーク)">🌓 自動</button>
+  <select id="lang" title="表示言語 / Language"><option value="ja">日本語</option><option value="en">English</option></select>
 </header>
 <dialog id="importDlg">
   <h2>C# を読み込んでブロックに変換</h2>
@@ -58,6 +59,7 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
     <div id="importLog" hidden><div id="collectBar" hidden></div><div id="logBody"><div class="ok"><small>C# を読み込むと、ブロック化できなかった箇所と足りないブロックがここに表示されます</small></div></div></div>
   </div>
 </main>
+<script src="js/i18n.js"></script>
 <script src="js/blocks.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/toolbox.js"></script>

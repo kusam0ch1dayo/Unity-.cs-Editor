@@ -78,7 +78,7 @@ function newTab(state) {
   loadActive();
 }
 function closeTab(i) {
-  if (!confirm(`「${project.files[i].name}」を閉じますか？ (タブを閉じる操作は元に戻せません)`)) return;
+  if (!confirm(tr('「{0}」を閉じますか？ (タブを閉じる操作は元に戻せません)', project.files[i].name))) return;
   if (project.files.length === 1) { project.files[0] = { name: 'NewScript.cs', state: newScriptState('NewScript') }; loadActive(); return; }
   project.files.splice(i, 1);
   if (i < project.active) project.active--;
@@ -87,8 +87,8 @@ function closeTab(i) {
 }
 function renderTabs() {
   document.getElementById('tabs').innerHTML = project.files.map((fl, i) =>
-    `<div class="tab${i === project.active ? ' on' : ''}" data-i="${i}" title="${esc(fl.name)}"><span>${esc(fl.name)}</span><button class="x" data-x="${i}" title="閉じる">×</button></div>`).join('')
-    + '<button id="newTab" title="新しいスクリプト">＋</button>';
+    `<div class="tab${i === project.active ? ' on' : ''}" data-i="${i}" title="${esc(fl.name)}"><span>${esc(fl.name)}</span><button class="x" data-x="${i}" title="${tr('閉じる')}">×</button></div>`).join('')
+    + `<button id="newTab" title="${tr('新しいスクリプト')}">＋</button>`;
 }
 document.getElementById('tabs').onclick = e => {
   if (e.target.id === 'newTab') return newTab();

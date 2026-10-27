@@ -289,18 +289,18 @@ public class TitleMenu : MonoBehaviour
 ` },
 ];
 const tplDlg = document.getElementById('tplDlg');
-document.getElementById('tplList').innerHTML = TEMPLATES.map((t, i) => `<button class="tpl" data-i="${i}"><b>${esc(t.name)}</b><small>${esc(t.desc)}</small></button>`).join('');
+document.getElementById('tplList').innerHTML = TEMPLATES.map((t, i) => `<button class="tpl" data-i="${i}"><b>${esc(tr(t.name))}</b><small>${esc(tr(t.desc))}</small></button>`).join('');
 document.getElementById('templates').onclick = () => tplDlg.showModal();
 document.getElementById('tplClose').onclick = () => tplDlg.close();
 document.getElementById('tplList').onclick = async e => {
   const btn = e.target.closest('.tpl');
   if (!btn) return;
   const t = TEMPLATES[+btn.dataset.i];
-  if (!tsParser) { document.getElementById('tplMsg').textContent = 'C# パーサーを読み込み中です…'; await tsReady; }
+  if (!tsParser) { document.getElementById('tplMsg').textContent = tr('C# パーサーを読み込み中です…'); await tsReady; }
   document.getElementById('tplMsg').textContent = '';
   newTab({});
-  importCs(t.code, false);
+  importCs(tr(t.code), false);
   ws.clearUndo();
   tplDlg.close();
-  showToast(`テンプレート「${t.name}」を新しいタブで開きました`);
+  showToast(tr('テンプレート「{0}」を新しいタブで開きました', tr(t.name)));
 };

@@ -17,7 +17,7 @@ function buildSearchIndex() {
       const b = Blockly.serialization.blocks.append({ type: item.type, fields: item.fields, inputs: item.inputs }, tmp);
       text = b.toString() + ' ' + (typeof b.tooltip === 'string' ? b.tooltip : '');
     } catch (e) {}
-    out.push({ item, text: `${item.type} ${c.name} ${SEARCH_ALIASES[c.name] || ''} ${text}`.toLowerCase() });
+    out.push({ item, text: `${item.type} ${c.name} ${SEARCH_ALIASES[CAT_JA.get(c)] || ''} ${text}`.toLowerCase() });
   }
   tmp.dispose();
   return out;
@@ -29,8 +29,8 @@ function searchBlocks(q) {
   searchIndex = searchIndex || buildSearchIndex();
   const hits = searchIndex.filter(x => words.every(w => x.text.includes(w))).map(x => x.item);
   box.clearSelection();
-  flyout.show(hits.length ? [{ kind: 'label', text: `「${q.trim()}」の検索結果: ${hits.length} 件` }, ...hits.slice(0, 50)]
-    : [{ kind: 'label', text: `「${q.trim()}」に合うブロックはありません` }]);
+  flyout.show(hits.length ? [{ kind: 'label', text: tr('「{0}」の検索結果: {1} 件', q.trim(), hits.length) }, ...hits.slice(0, 50)]
+    : [{ kind: 'label', text: tr('「{0}」に合うブロックはありません', q.trim()) }]);
 }
 const searchInput = document.getElementById('search');
 let searchTimer;

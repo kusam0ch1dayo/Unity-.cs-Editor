@@ -44,7 +44,7 @@ function generate(workspace) {
   ranges.forEach(r => { while (r[0] < r[1] && !lines[r[0] - 1].trim()) r[0]++; });
   return { code: out, ranges };
 }
-cs.scrubNakedValue = line => `// 未接続の式: ${line}\n`;
+cs.scrubNakedValue = line => `// ${tr('未接続の式')}: ${line}\n`;
 
 const f = (b, n) => b.getFieldValue(n);
 const v = (b, n, o, d = '') => cs.valueToCode(b, n, o) || d;

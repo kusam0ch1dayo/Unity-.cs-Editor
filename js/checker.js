@@ -327,7 +327,7 @@ function check() {
   }
   // ブロックに警告アイコンを付ける
   const byBlock = new Map();
-  out.forEach(x => byBlock.set(x.block, new Set([...(byBlock.get(x.block) || []), (x.level === 'error' ? '✖ ' : '⚠ ') + x.msg])));
+  out.forEach(x => byBlock.set(x.block, new Set([...(byBlock.get(x.block) || []), (x.level === 'error' ? '✖ ' : '⚠ ') + tr(x.msg)])));
   Blockly.Events.disable();
   try {
     for (const b of ws.getAllBlocks(false)) {
@@ -339,7 +339,7 @@ function check() {
 }
 
 // ---------- 構文チェック (tree-sitter C# パーサー) ----------
-let tsParser = null, tsState = '構文チェッカー読込中…';
+let tsParser = null, tsState = tr('構文チェッカー読込中…');
 // wasm は base64 の JS として同梱 (file:// でも fetch なしで読める)。大きいので画面の表示後に読み込む
 const loadScript = src => new Promise((ok, ng) => document.head.appendChild(Object.assign(document.createElement('script'), { src, onload: ok, onerror: ng })));
 const fromBase64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -351,7 +351,7 @@ const tsReady = (async () => {
     const p = new TreeSitter();
     p.setLanguage(await TreeSitter.Language.load(csharp));
     tsParser = p; tsState = '';
-  } catch (e) { tsState = '構文チェッカーを読み込めませんでした (意味チェックのみ)'; }
+  } catch (e) { tsState = tr('構文チェッカーを読み込めませんでした (意味チェックのみ)'); }
   if (typeof update === 'function') update();
 })();
 function syntaxErrors(src) {

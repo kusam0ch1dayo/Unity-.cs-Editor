@@ -8,7 +8,7 @@ const darkTheme = Blockly.Theme.defineTheme('ubc-dark', {
     scrollbarColour: '#4a4d55', scrollbarOpacity: 0.7, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0',
   },
 });
-const THEME_LABEL = { auto: '🌓 自動', light: '☀ ライト', dark: '🌙 ダーク' };
+const THEME_LABEL = { auto: tr('🌓 自動'), light: tr('☀ ライト'), dark: tr('🌙 ダーク') };
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 let themeMode = 'auto';
 try { themeMode = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}

@@ -14,11 +14,11 @@ const AC = {
     const cls = [...MODEL.keys()];
     const T = (list, detail) => list.map(label => ({ label, insert: label, detail }));
     if (['type', 'params', 'base', 'component', 'class'].includes(kind)) {
-      if (kind === 'base') return [...T(['MonoBehaviour', 'ScriptableObject'], 'Unity'), ...T(cls, 'クラス')];
-      if (kind === 'component') return [...T(COMPONENTS, 'コンポーネント'), ...T(cls.filter(n => isMono(MODEL.get(n))), 'クラス')];
-      if (kind === 'class') return [...T(cls, 'クラス'), ...T(UNITY_TYPES, 'Unity')];
-      return [...T(PRIMS, '型'), ...T(cls, 'クラス'), ...T(UNITY_TYPES, 'Unity'),
-        ...T(['int', 'float', 'string', 'GameObject', ...cls].map(t => `List<${t}>`), 'リスト')];
+      if (kind === 'base') return [...T(['MonoBehaviour', 'ScriptableObject'], 'Unity'), ...T(cls, tr('クラス'))];
+      if (kind === 'component') return [...T(COMPONENTS, tr('コンポーネント')), ...T(cls.filter(n => isMono(MODEL.get(n))), tr('クラス'))];
+      if (kind === 'class') return [...T(cls, tr('クラス')), ...T(UNITY_TYPES, 'Unity')];
+      return [...T(PRIMS, tr('型')), ...T(cls, tr('クラス')), ...T(UNITY_TYPES, 'Unity'),
+        ...T(['int', 'float', 'string', 'GameObject', ...cls].map(t => `List<${t}>`), tr('リスト'))];
     }
     const methodOnly = kind === 'method';
     const fromMembers = (mem, detail) => Object.entries(mem || {})
@@ -30,10 +30,10 @@ const AC = {
       return fromMembers(membersOf(r.type), r.type.replace('#', ''));
     }
     const out = [];
-    if (!methodOnly) sc.vars.forEach((t, n) => out.push({ label: n, insert: n, detail: t + ' · ローカル' }));
-    if (sc.cls) out.push(...fromMembers({ ...sc.cls.members, ...classMembers(sc.cls) }, 'メンバー'));
+    if (!methodOnly) sc.vars.forEach((t, n) => out.push({ label: n, insert: n, detail: t + ' · ' + tr('ローカル') }));
+    if (sc.cls) out.push(...fromMembers({ ...sc.cls.members, ...classMembers(sc.cls) }, tr('メンバー')));
     if (!methodOnly) out.push({ label: 'this', insert: 'this', detail: 'this' });
-    out.push(...T(Object.keys(STATICS), 'Unity'), ...T(cls, 'クラス'));
+    out.push(...T(Object.keys(STATICS), 'Unity'), ...T(cls, tr('クラス')));
     return out;
   },
   open(field) {
@@ -62,7 +62,7 @@ const AC = {
   draw() {
     this.el.innerHTML = this.items.map((c, i) =>
       `<div class="ac-item${i === this.idx ? ' sel' : ''}" data-i="${i}"><span>${esc(c.label)}</span><small>${esc(c.detail)}</small></div>`).join('')
-      + '<div class="ac-hint">Tab で確定 · ↑↓ で選択 · Esc で閉じる</div>';
+      + `<div class="ac-hint">${tr('Tab で確定 · ↑↓ で選択 · Esc で閉じる')}</div>`;
     const sel = this.el.querySelector('.sel');
     if (sel) sel.scrollIntoView({ block: 'nearest' });
   },

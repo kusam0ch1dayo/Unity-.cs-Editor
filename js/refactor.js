@@ -38,9 +38,9 @@ function findDecl(block) {
 }
 function renameSymbol(decl) {
   const field = DECL[decl.type], old = f(decl, field).trim();
-  Blockly.dialog.prompt(`新しい名前 (「${old}」を使っている場所もすべて変わります)`, old, name => {
+  Blockly.dialog.prompt(tr('新しい名前 (「{0}」を使っている場所もすべて変わります)', old), old, name => {
     if (!name || (name = name.trim()) === old) return;
-    if (!/^[A-Za-z_]\w*$/.test(name)) { Blockly.dialog.alert(`名前「${name}」は使えません`); return; }
+    if (!/^[A-Za-z_]\w*$/.test(name)) { Blockly.dialog.alert(tr('名前「{0}」は使えません', name)); return; }
     const isType = ['class_def', 'enum_def'].includes(decl.type), word = new RegExp(`\\b${old}\\b`, 'g');
     // 文字列 ("...") の中は変えない
     const inCode = s => s.split(/("(?:\\.|[^"\\])*")/).map((part, i) => i % 2 ? part : part.replace(word, name)).join('');
@@ -61,13 +61,13 @@ function renameSymbol(decl) {
         (REF_TEXT[b.type] || []).forEach(fl => set(fl, b.type === 'interp_string' ? s => s.replace(/\{[^}]*\}/g, inCode) : inCode));
       }
     } finally { Blockly.Events.setGroup(false); }
-    showToast(`「${old}」→「${name}」に変更しました (参照 ${count} か所)\n(取り消しで元に戻せます)`);
+    showToast(tr('「{0}」→「{1}」に変更しました (参照 {2} か所)', old, name, count) + '\n' + tr('(取り消しで元に戻せます)'));
   });
 }
 const renameTarget = b => b && !b.isInFlyout ? (DECL[b.type] ? b : findDecl(b)) : null;
 Blockly.ContextMenuRegistry.registry.register({
   id: 'ubc_rename', weight: -1, scopeType: Blockly.ContextMenuRegistry.ScopeType.BLOCK,
-  displayText: () => '名前を一括変更… (F2)',
+  displayText: () => tr('名前を一括変更… (F2)'),
   preconditionFn: s => renameTarget(s.block) ? 'enabled' : 'hidden',
   callback: s => renameSymbol(renameTarget(s.block)),
 });

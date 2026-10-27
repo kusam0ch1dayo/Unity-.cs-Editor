@@ -126,3 +126,7 @@ toolbox.contents.splice(toolbox.contents.findIndex(c => c.name === 'その他'),
     { type: 'button_listener_lambda', inputs: { OBJ: vget('button'), FN: { block: { type: 'lambda_block', inputs: { BODY: { block: { type: 'debug_log', inputs: { MSG: txt('clicked') } } } } } } } }]),
   cat('コメント・属性', 270, ['comment_stmt', 'comment_member', 'attr', { type: 'attr', fields: { CODE: 'Range(0, 10)' } },
     { type: 'attr', fields: { CODE: 'Tooltip("説明")' } }, { type: 'attr', fields: { CODE: 'HideInInspector' } }, 'class_attr']));
+
+// 表示言語に合わせてカテゴリ名やサンプルの文字を訳す (検索の別名は元の日本語名で引く)
+const CAT_JA = new Map(toolbox.contents.map(c => [c, c.name]));
+i18nJson(toolbox); i18nJson(sample);

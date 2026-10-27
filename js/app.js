@@ -34,10 +34,10 @@ function update() {
   const st = document.getElementById('status');
   st.textContent = nE || nW ? `✖ ${nE}  ⚠ ${nW}` : '✔ OK';
   st.style.color = nE ? '#ff6b6b' : nW ? '#f5c04a' : '#7bd88f';
-  document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(x.msg)}`
-      + `<small>${x.line ? '行 ' + x.line : esc(x.block.toString(28))}</small>`
-      + (x.fixes || []).map((fx, j) => `<button class="fix" data-f="${i}:${j}" title="クリックで修正">${esc(fx.label)}</button>`).join('') + '</div>').join('')
-    : '<div class="ok">✔ エラーはありません</div>') + (tsState ? `<div><small>${tsState}</small></div>` : '');
+  document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(tr(x.msg))}`
+      + `<small>${x.line ? tr('行 {0}', x.line) : esc(x.block.toString(28))}</small>`
+      + (x.fixes || []).map((fx, j) => `<button class="fix" data-f="${i}:${j}" title="${tr('クリックで修正')}">${esc(tr(fx.label))}</button>`).join('') + '</div>').join('')
+    : `<div class="ok">${tr('✔ エラーはありません')}</div>`) + (tsState ? `<div><small>${tr(tsState)}</small></div>` : '');
   document.getElementById('undo').disabled = !ws.getUndoStack().length;
   document.getElementById('redo').disabled = !ws.getRedoStack().length;
   highlightBlock(selectedId);
@@ -106,9 +106,9 @@ window.addEventListener('keydown', e => {
   history(k === 'y' || e.shiftKey);
 }, true);
 document.getElementById('copy').onclick = async e => {
-  try { await navigator.clipboard.writeText(code); e.target.textContent = 'コピー済'; }
-  catch (err) { e.target.textContent = 'コピー失敗'; }
-  setTimeout(() => e.target.textContent = 'コピー', 1500);
+  try { await navigator.clipboard.writeText(code); e.target.textContent = tr('コピー済'); }
+  catch (err) { e.target.textContent = tr('コピー失敗'); }
+  setTimeout(() => e.target.textContent = tr('コピー'), 1500);
 };
 document.getElementById('dl').onclick = () => {
   const a = document.createElement('a');
@@ -128,16 +128,16 @@ function showToast(text, ms = 8000) {
 document.getElementById('import').onclick = () => { msg.textContent = ''; dlg.showModal(); };
 document.getElementById('importCancel').onclick = () => dlg.close();
 const importSrc = document.getElementById('importSrc'), importFile = document.getElementById('importFile'), SRC_PLACEHOLDER = importSrc.placeholder;
-let srcName = '貼り付けたコード', srcFiles = [];
+let srcName = tr('貼り付けたコード'), srcFiles = [];
 importFile.onchange = async e => {
   srcFiles = [...e.target.files];
   if (srcFiles.length === 1) { importSrc.value = await srcFiles[0].text(); srcName = srcFiles[0].name; srcFiles = []; }
-  else if (srcFiles.length > 1) { importSrc.value = ''; importSrc.placeholder = `${srcFiles.length} 個のファイルを選びました。それぞれ新しいタブで開きます`; }
+  else if (srcFiles.length > 1) { importSrc.value = ''; importSrc.placeholder = tr('{0} 個のファイルを選びました。それぞれ新しいタブで開きます', srcFiles.length); }
 };
-importSrc.addEventListener('input', () => { srcName = '貼り付けたコード'; srcFiles = []; importSrc.placeholder = SRC_PLACEHOLDER; });
+importSrc.addEventListener('input', () => { srcName = tr('貼り付けたコード'); srcFiles = []; importSrc.placeholder = SRC_PLACEHOLDER; });
 document.getElementById('importGo').onclick = async () => {
   const toNewTab = document.getElementById('importNewTab').checked, append = document.getElementById('importAppend').checked;
-  if (!srcFiles.length && !importSrc.value.trim()) { msg.textContent = 'C# コードを入力してください'; return; }
+  if (!srcFiles.length && !importSrc.value.trim()) { msg.textContent = tr('C# コードを入力してください'); return; }
   try {
     let r;
     if (srcFiles.length) {
@@ -160,16 +160,16 @@ document.getElementById('importGo').onclick = async () => {
     dlg.close();
     srcFiles = []; importFile.value = ''; importSrc.placeholder = SRC_PLACEHOLDER;
     const kinds = renderLog(r);
-    showToast(`${r.count} 個のブロックに変換しました` + (files ? ` (${files} ファイル)` : '')
-      + (r.log.length ? `\n足りないブロック ${kinds} 種類 / ${r.log.length} か所 → 右の「読み込みログ」の「依頼文を作成」でまとめられます` : '')
-      + (toNewTab || files ? '\n(新しいタブで開きました)' : '\n(取り消しで元に戻せます)'));
-  } catch (err) { msg.textContent = '変換できませんでした: ' + err.message; }
+    showToast(tr('{0} 個のブロックに変換しました', r.count) + (files ? ' ' + tr('({0} ファイル)', files) : '')
+      + (r.log.length ? '\n' + tr('足りないブロック {0} 種類 / {1} か所 → 右の「読み込みログ」の「依頼文を作成」でまとめられます', kinds, r.log.length) : '')
+      + '\n' + tr(toNewTab || files ? '(新しいタブで開きました)' : '(取り消しで元に戻せます)'));
+  } catch (err) { msg.textContent = tr('変換できませんでした: {0}', tr(err.message)); }
 };
 toast.onclick = () => toast.hidden = true;
 
 // 足りないブロックの累計 (複数回の読み込みをまとめて依頼文にする)
 const MISSING_KEY = 'unity-block-coder-missing';
-const KIND_ROLE = { raw_stmt: '文として使う', raw_expr: '値 (式) として使う', raw_member: 'クラスのメンバーとして使う' };
+const KIND_ROLE = { raw_stmt: tr('文として使う'), raw_expr: tr('値 (式) として使う'), raw_member: tr('クラスのメンバーとして使う') };
 let collected = { items: new Map(), notes: [] };
 try {
   const d = JSON.parse(localStorage.getItem(MISSING_KEY));
@@ -195,20 +195,20 @@ function collect(r, source) {
 function renderCollected() {
   const bar = document.getElementById('collectBar'), items = [...collected.items.values()];
   bar.hidden = !items.length;
-  bar.innerHTML = `<span>累計: 足りないブロック ${items.length} 種類 / ${items.reduce((n, x) => n + x.count, 0)} か所</span>`
-    + '<span><button id="makeReq" class="primary">依頼文を作成</button> <button id="resetReq">リセット</button></span>';
+  bar.innerHTML = `<span>${tr('累計: 足りないブロック {0} 種類 / {1} か所', items.length, items.reduce((n, x) => n + x.count, 0))}</span>`
+    + `<span><button id="makeReq" class="primary">${tr('依頼文を作成')}</button> <button id="resetReq">${tr('リセット')}</button></span>`;
 }
 function buildRequest() {
   const items = [...collected.items.values()].sort((a, b) => b.count - a.count), total = items.reduce((n, x) => n + x.count, 0);
-  const lines = ['# Unity Block Coder: ブロック追加の依頼', '',
-    `C# を読み込んだとき、専用ブロックがなく代用ブロック (C# 文 / 式 / メンバー) になった構文が ${items.length} 種類・計 ${total} か所ありました。`,
-    'これらを専用ブロックとして index.html に追加してください。',
-    '追加するときは C# 生成・C# 読み込み (Imp)・エラーチェック・Tab 補完・ツールボックスにも対応させ、下のコード例が「読み込み → C# 生成」で元と同じになることを確認してください。',
-    '', '## 足りないブロック (多い順)'];
-  items.forEach((x, i) => lines.push('', `### ${i + 1}. ${x.need}`, `- 出現数: ${x.count} か所 (${x.sources.join(', ')})`,
-    `- 代用されたブロック: 「${KIND[x.type]}」(${KIND_ROLE[x.type]})`, '- コード例:', '```csharp', ...x.examples, '```'));
-  if (collected.notes.length) lines.push('', '## 読み込み時に省略されたもの', ...collected.notes.map(n => `- ${n}`));
-  lines.push('', `(${new Date().toLocaleString()} Unity Block Coder で作成)`);
+  const lines = [tr('# Unity Block Coder: ブロック追加の依頼'), '',
+    tr('C# を読み込んだとき、専用ブロックがなく代用ブロック (C# 文 / 式 / メンバー) になった構文が {0} 種類・計 {1} か所ありました。', items.length, total),
+    tr('これらを専用ブロックとして index.html に追加してください。'),
+    tr('追加するときは C# 生成・C# 読み込み (Imp)・エラーチェック・Tab 補完・ツールボックスにも対応させ、下のコード例が「読み込み → C# 生成」で元と同じになることを確認してください。'),
+    '', tr('## 足りないブロック (多い順)')];
+  items.forEach((x, i) => lines.push('', `### ${i + 1}. ${tr(x.need)}`, tr('- 出現数: {0} か所 ({1})', x.count, x.sources.join(', ')),
+    tr('- 代用されたブロック: 「{0}」({1})', KIND[x.type], KIND_ROLE[x.type]), tr('- コード例:'), '```csharp', ...x.examples, '```'));
+  if (collected.notes.length) lines.push('', tr('## 読み込み時に省略されたもの'), ...collected.notes.map(n => `- ${tr(n)}`));
+  lines.push('', tr('({0} Unity Block Coder で作成)', new Date().toLocaleString()));
   return lines.join('\n');
 }
 const reqDlg = document.getElementById('reqDlg');
@@ -218,9 +218,9 @@ document.getElementById('collectBar').onclick = e => {
 };
 document.getElementById('reqClose').onclick = () => reqDlg.close();
 document.getElementById('reqCopy').onclick = async e => {
-  try { await navigator.clipboard.writeText(document.getElementById('reqText').value); e.target.textContent = 'コピー済'; }
-  catch (err) { document.getElementById('reqText').select(); e.target.textContent = '選択しました (Ctrl+C でコピー)'; }
-  setTimeout(() => e.target.textContent = 'コピー', 2000);
+  try { await navigator.clipboard.writeText(document.getElementById('reqText').value); e.target.textContent = tr('コピー済'); }
+  catch (err) { document.getElementById('reqText').select(); e.target.textContent = tr('選択しました (Ctrl+C でコピー)'); }
+  setTimeout(() => e.target.textContent = tr('コピー'), 2000);
 };
 document.getElementById('reqSave').onclick = () => {
   const a = document.createElement('a');
@@ -236,31 +236,31 @@ const showTab = log => {
 };
 document.getElementById('tabIssues').onclick = () => showTab(false);
 document.getElementById('tabLog').onclick = () => showTab(true);
-const KIND = { raw_stmt: 'C# 文', raw_expr: 'C# 式', raw_member: 'C# メンバー' };
+const KIND = { raw_stmt: tr('C# 文'), raw_expr: tr('C# 式'), raw_member: tr('C# メンバー') };
 function renderLog(r) {
   const groups = new Map();
   r.log.forEach(e => groups.set(e.need, (groups.get(e.need) || 0) + 1));
   const sorted = [...groups].sort((a, b) => b[1] - a[1]);
-  const text = [`読み込み ${new Date().toLocaleTimeString()} / ブロック ${r.count} 個 / 代用 ${r.log.length} か所`,
-    ...sorted.map(([k, c]) => `[足りないブロック] ${k} ×${c}`), ...r.log.map(e => `行 ${e.line}: ${e.need} → ${KIND[e.type]} で代用: ${e.code}`),
-    ...r.notes.map(n => `[情報] ${n}`)].join('\n');
+  const text = [tr('読み込み {0} / ブロック {1} 個 / 代用 {2} か所', new Date().toLocaleTimeString(), r.count, r.log.length),
+    ...sorted.map(([k, c]) => tr('[足りないブロック] {0} ×{1}', tr(k), c)), ...r.log.map(e => tr('行 {0}: {1} → {2} で代用: {3}', e.line, tr(e.need), KIND[e.type], e.code)),
+    ...r.notes.map(n => tr('[情報] {0}', tr(n)))].join('\n');
   const box = document.getElementById('logBody');
-  box.innerHTML = `<div class="log-head"><span>${new Date().toLocaleTimeString()} 読み込み: ブロック ${r.count} 個 / 代用 ${r.log.length} か所</span><button id="copyLog">ログをコピー</button></div>`
-    + (sorted.length ? '<div class="log-sec">足りないブロック</div>' + sorted.map(([k, c]) => `<div class="log-need">■ ${esc(k)}<small>×${c}</small></div>`).join('')
-      : '<div class="ok">✔ すべて専用ブロックに変換できました</div>')
-    + (r.log.length ? '<div class="log-sec">詳細 (クリックでブロックへ移動)</div>' + r.log.map((e, i) =>
-      `<div class="issue" data-i="${i}"><b style="color:#f5c04a">行 ${e.line}</b> ${esc(e.need)} → 「${KIND[e.type]}」で代用<code>${esc(e.code)}</code></div>`).join('') : '')
-    + (r.notes.length ? '<div class="log-sec">その他</div>' + r.notes.map(n => `<div>ℹ ${esc(n)}</div>`).join('') : '');
+  box.innerHTML = `<div class="log-head"><span>${esc(tr('{0} 読み込み: ブロック {1} 個 / 代用 {2} か所', new Date().toLocaleTimeString(), r.count, r.log.length))}</span><button id="copyLog">${tr('ログをコピー')}</button></div>`
+    + (sorted.length ? `<div class="log-sec">${tr('足りないブロック')}</div>` + sorted.map(([k, c]) => `<div class="log-need">■ ${esc(tr(k))}<small>×${c}</small></div>`).join('')
+      : `<div class="ok">${tr('✔ すべて専用ブロックに変換できました')}</div>`)
+    + (r.log.length ? `<div class="log-sec">${tr('詳細 (クリックでブロックへ移動)')}</div>` + r.log.map((e, i) =>
+      `<div class="issue" data-i="${i}"><b style="color:#f5c04a">${tr('行 {0}', e.line)}</b> ${esc(tr(e.need))} ${esc(tr('→ 「{0}」で代用', KIND[e.type]))}<code>${esc(e.code)}</code></div>`).join('') : '')
+    + (r.notes.length ? `<div class="log-sec">${tr('その他')}</div>` + r.notes.map(n => `<div>ℹ ${esc(tr(n))}</div>`).join('') : '');
   box.onclick = async e => {
     if (e.target.id === 'copyLog') {
-      try { await navigator.clipboard.writeText(text); e.target.textContent = 'コピー済'; } catch (err) { e.target.textContent = 'コピー失敗'; }
+      try { await navigator.clipboard.writeText(text); e.target.textContent = tr('コピー済'); } catch (err) { e.target.textContent = tr('コピー失敗'); }
       return;
     }
     const d = e.target.closest('.issue');
     const blk = d && ws.getBlockById(r.log[+d.dataset.i].id);
     if (blk) { ws.centerOnBlock(blk.id); Blockly.common.setSelected(blk); }
   };
-  document.getElementById('tabLog').textContent = `読み込みログ${r.log.length ? ` (${r.log.length})` : ''}`;
+  document.getElementById('tabLog').textContent = tr('読み込みログ') + (r.log.length ? ` (${r.log.length})` : '');
   console.log(text);
   showTab(true);
   return groups.size;
