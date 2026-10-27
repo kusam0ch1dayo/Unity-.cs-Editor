@@ -233,7 +233,7 @@ async function qolTests(browser, base) {
   await ev(() => Blockly.common.setSelected(ws.getAllBlocks(false).find(b => b.type === 'unity_event' && f(b, 'EVENT') === 'Start()')));
   await paste('int lives = 3;\nDebug.Log("hi " + lives);');
   check('文の C# を貼り付けると、選んだメソッドの中にブロックとして入る', await ev(() => /void Start\(\)\s*\{[^}]*int lives = 3;\s*Debug\.Log\("hi " \+ lives\);\s*\}/.test(code)));
-  await ev(() => ws.undo(false));
+  await p.waitForTimeout(100); await ev(() => ws.undo(false));   // 変更は少し遅れて取り消しの記録に入るので待つ
   check('貼り付けは取り消せる', await ev(() => { update(); return !code.includes('int lives'); }));
   await ev(() => Blockly.common.setSelected(ws.getAllBlocks(false).find(b => b.type === 'class_def' && f(b, 'BASE') === 'MonoBehaviour')));
   await paste('public int score;\nvoid AddScore(int n) { score += n; }');
@@ -247,7 +247,7 @@ async function qolTests(browser, base) {
   // ⑥ 折りたたみ・整列
   await ev(() => collapseAll(true));
   check('メソッドをまとめて折りたためる', await ev(() => ws.getAllBlocks(false).filter(b => b.isCollapsed()).length >= 2));
-  await ev(() => ws.undo(false));
+  await p.waitForTimeout(100); await ev(() => ws.undo(false));   // 変更は少し遅れて取り消しの記録に入るので待つ
   check('折りたたみは 1 回の取り消しで戻る', await ev(() => !ws.getAllBlocks(false).some(b => b.isCollapsed())));
   await ev(() => { collapseAll(true); collapseAll(false); tidyUp(); });
   check('すべて開く・整列ができる', await ev(() => !ws.getAllBlocks(false).some(b => b.isCollapsed())));
@@ -274,7 +274,7 @@ async function qolTests(browser, base) {
   await ev(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    void Update()\n    {\n        GetComponent<Rigidbody>().AddForce(Vector3.up);\n        GetComponent<Rigidbody>().mass = 2;\n    }\n}\n', false); ws.clearUndo(); update(); renderHints(); });
   await ev(() => document.querySelector('#hints [data-fix]').click());
   check('Update の GetComponent を「Start で 1 回だけ取得」に書き換える', await ev(() => { update(); return /private Rigidbody rb;\s*void Start\(\)\s*\{\s*rb = GetComponent<Rigidbody>\(\);/.test(code) && (code.match(/GetComponent/g) || []).length === 1 && !issues.length; }));
-  await ev(() => ws.undo(false));
+  await p.waitForTimeout(100); await ev(() => ws.undo(false));   // 変更は少し遅れて取り消しの記録に入るので待つ
   check('書き換えは 1 回の取り消しで戻る', await ev(() => { update(); return (code.match(/GetComponent<Rigidbody>\(\)/g) || []).length === 2 && !code.includes('private Rigidbody'); }));
 
   // ⑨ 変更点の比較
@@ -291,7 +291,7 @@ async function qolTests(browser, base) {
   await ev(() => { setEditMode(true); const t = document.querySelector('#csEditor textarea'); t.value = t.value.replace(/(void Start\(\)\s*\{)/, '$1\n        int x = 1;'); checkEditor(); applyEditor(); setEditMode(false); });
   await p.waitForTimeout(100);   // ブロックの変更は少し遅れて取り消しの記録に入る
   const n = await ev(() => ws.getAllBlocks(false).length);
-  await ev(() => ws.undo(false));
+  await p.waitForTimeout(100); await ev(() => ws.undo(false));   // 変更は少し遅れて取り消しの記録に入るので待つ
   check('C# 編集の反映を取り消すと元に戻る (ブロックが重ならない)', await ev(n => { update(); return !code.includes('int x = 1;') && ws.getAllBlocks(false).length < n; }, n));
 
   // ⑫ タブ
