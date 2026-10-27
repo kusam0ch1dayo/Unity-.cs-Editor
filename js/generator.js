@@ -17,8 +17,33 @@ cs.finish = function (code) {
 };
 cs.scrub_ = function (block, code, thisOnly) {
   const next = block.nextConnection && block.nextConnection.targetBlock();
+  if (!block.outputConnection && code) {
+    // ブロックのメモを C# のコメントとして出力 (設定でオンのとき)
+    const memo = this.exportMemo && block.getCommentText && block.getCommentText();
+    if (memo) { const lead = code.match(/^\n*/)[0]; code = lead + memo.split('\n').map(l => '// ' + l).join('\n') + '\n' + code.slice(lead.length); }
+    // 行とブロックを対応づける目印 (generate() で取り除く)
+    if (this.markBlocks) { const nl = code.endsWith('\n') ? '\n' : ''; code = `\u0001${block.id}\u0002${code.slice(0, code.length - nl.length)}\u0003${block.id}\u0002${nl}`; }
+  }
   return code + (next && !thisOnly ? this.blockToCode(next) : '');
 };
+// C# を生成し、各ブロックが何行目から何行目になったか (ranges: ブロック ID → [開始行, 終了行]) も返す
+function generate(workspace) {
+  cs.markBlocks = true;
+  let raw;
+  try { raw = cs.workspaceToCode(workspace); } finally { cs.markBlocks = false; }
+  const ranges = new Map(), open = new Map(), re = /\u0001([^\u0002]*)\u0002|\u0003([^\u0002]*)\u0002|\n/g;
+  let out = '', line = 1, last = 0, m;
+  while ((m = re.exec(raw))) {
+    out += raw.slice(last, m.index); last = re.lastIndex;
+    if (m[0] === '\n') { out += '\n'; line++; }
+    else if (m[1] !== undefined) open.set(m[1], line);
+    else ranges.set(m[2], [open.get(m[2]), line]);
+  }
+  out = (out + raw.slice(last)).replace(/[ \t]+$/gm, '');
+  const lines = out.split('\n');
+  ranges.forEach(r => { while (r[0] < r[1] && !lines[r[0] - 1].trim()) r[0]++; });
+  return { code: out, ranges };
+}
 cs.scrubNakedValue = line => `// 未接続の式: ${line}\n`;
 
 const f = (b, n) => b.getFieldValue(n);

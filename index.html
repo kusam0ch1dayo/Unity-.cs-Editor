@@ -18,16 +18,19 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 <body>
 <header>
   <h1>Unity Block Coder <small style="font-weight:400;opacity:.6">ブロック → C#</small></h1>
+  <input id="search" type="search" placeholder="🔍 ブロック検索 (Ctrl+K)" autocomplete="off">
   <button id="undo" title="取り消し (Ctrl+Z)">↶ 取り消し</button>
   <button id="redo" title="やり直し (Ctrl+Y / Ctrl+Shift+Z)">↷ やり直し</button>
+  <button id="templates">テンプレート</button>
   <button id="import">C# 読込</button>
   <button id="sample">サンプル読込</button>
   <button id="clear">全消去</button>
+  <button id="theme" title="表示テーマ (自動 / ライト / ダーク)">🌓 自動</button>
 </header>
 <dialog id="importDlg">
   <h2>C# を読み込んでブロックに変換</h2>
   <textarea id="importSrc" spellcheck="false" placeholder="ここに C# コードを貼り付けるか、ファイルを選んでください"></textarea>
-  <div class="row"><input type="file" id="importFile" accept=".cs,text/plain"><label><input type="checkbox" id="importAppend"> 今のブロックに追加する</label></div>
+  <div class="row"><input type="file" id="importFile" accept=".cs,text/plain" multiple><label><input type="checkbox" id="importNewTab" checked> 新しいタブで開く</label><label><input type="checkbox" id="importAppend"> 今のブロックに追加する</label></div>
   <p id="importMsg"></p>
   <div class="row end"><button id="importCancel">キャンセル</button><button id="importGo" class="primary">ブロックに変換</button></div>
 </dialog>
@@ -37,11 +40,18 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
   <textarea id="reqText" readonly spellcheck="false"></textarea>
   <div class="row end"><button id="reqClose">閉じる</button><button id="reqSave">.md 保存</button><button id="reqCopy" class="primary">コピー</button></div>
 </dialog>
+<dialog id="tplDlg">
+  <h2>テンプレート</h2>
+  <p class="hint">よく作るスクリプトを新しいタブで開きます。開いたあとは自由に編集できます。</p>
+  <div id="tplList"></div>
+  <p id="tplMsg"></p>
+  <div class="row end"><button id="tplClose">閉じる</button></div>
+</dialog>
 <div id="toast" hidden></div>
 <main>
-  <div id="blocks"></div>
+  <div id="left"><div id="tabs"></div><div id="blocks"></div></div>
   <div id="side">
-    <div class="bar"><span id="fname">Script.cs</span><b id="status"></b><button id="copy">コピー</button><button id="dl" class="primary">.cs 保存</button></div>
+    <div class="bar"><span id="fname">Script.cs</span><b id="status"></b><label class="memo" title="ブロックに付けたメモ (右クリック →「コメントを追加」) を // コメントとして出力"><input type="checkbox" id="memoOut"> メモ出力</label><button id="copy">コピー</button><button id="dl" class="primary">.cs 保存</button><button id="zip" title="全タブのスクリプトを zip で保存">全部 zip</button></div>
     <pre id="code"></pre>
     <div class="tabs"><button id="tabIssues" class="on">問題</button><button id="tabLog">読み込みログ</button></div>
     <div id="issues"></div>
@@ -56,5 +66,10 @@ window.LANG = (() => { try { return localStorage.getItem('unity-block-coder-lang
 <script src="js/autocomplete.js"></script>
 <script src="js/importer.js"></script>
 <script src="js/app.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/search.js"></script>
+<script src="js/refactor.js"></script>
+<script src="js/project.js"></script>
+<script src="js/templates.js"></script>
 </body>
 </html>

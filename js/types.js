@@ -133,6 +133,8 @@ function model() {
     }
     classes.set(c.name, c);
   }
+  // ほかのタブのクラスも型として使えるようにする
+  if (typeof otherClasses === 'function') otherClasses().forEach((c, n) => classes.has(n) || classes.set(n, c));
   return classes;
 }
 const isMono = (c, d = 0) => !!c && (c.base === 'MonoBehaviour' || (d < 5 && isMono(MODEL.get(c.base), d + 1)));

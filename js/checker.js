@@ -1,5 +1,47 @@
 // エラーチェック (意味チェックと tree-sitter による構文チェック)
 // ---------- 意味チェック ----------
+// 編集距離 (つづり間違いの候補探し用)
+function lev(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+// いちばん近い名前 (2 文字以内の違いのとき)
+function closest(s, list) {
+  let best = null, bd = Math.min(3, Math.max(2, Math.floor(s.length / 3) + 1));
+  for (const x of new Set(list)) { const d = lev(s.toLowerCase(), x.toLowerCase()); if (x !== s && d < bd) { bd = d; best = x; } }
+  return best;
+}
+// 「〜は定義されていません」の修正候補: 近い名前に直す / フィールドやメソッドを作る
+function undefinedFixes(b, path, field, sc) {
+  const head = path.split('.')[0], isCall = head.endsWith('()'), name = head.replace('()', ''), fixes = [];
+  const names = [...sc.vars.keys(), ...(sc.cls ? Object.keys(classMembers(sc.cls)) : []), ...(isCall ? [] : [...Object.keys(STATICS), ...MODEL.keys()])]
+    .filter(n => n.endsWith('()') === isCall).map(n => n.replace('()', ''));
+  const near = closest(name, names);
+  if (near) fixes.push({ label: `'${near}' に修正`, run: () => b.setFieldValue(f(b, field).replace(new RegExp(`^${name}\\b`), near), field) });
+  const cls = sc.cls && ws.getAllBlocks(false).find(x => x.type === 'class_def' && f(x, 'NAME') === sc.cls.name);
+  if (cls && path === head) {
+    if (isCall) fixes.push({ label: `メソッド '${name}' を作成`, run: () => addMember(cls, b.type === 'start_coroutine'
+      ? { type: 'coroutine_def', fields: { NAME: name, PARAMS: '' }, inputs: { BODY: { block: { type: 'yield_null' } } } }
+      : { type: 'method_def', fields: { ACCESS: 'private', RET: 'void', NAME: name, PARAMS: '' } }, false) });
+    else {
+      let t = b.type === 'var_set' ? typeOf(b.getInputTargetBlock('VALUE')) : b.type === 'var_incr' ? 'int' : '?';
+      if (!knownType(t) || t === 'null') t = 'float';
+      fixes.push({ label: `フィールド '${name}' (${t}) を追加`, run: () => addMember(cls, { type: 'field_def', fields: { ACCESS: 'private', TYPE: t, NAME: name } }, true) });
+    }
+  }
+  return fixes;
+}
+// クラスにメンバーを追加 (first: 先頭に / それ以外: 末尾に)
+function addMember(cls, json, first) {
+  const nb = Blockly.serialization.blocks.append(json, ws), input = cls.getInput('MEMBERS').connection;
+  let last = input.targetBlock();
+  if (first || !last) nb.previousConnection.connect(input);
+  else { while (last.getNextBlock()) last = last.getNextBlock(); nb.previousConnection.connect(last.nextConnection); }
+  Blockly.common.setSelected(nb);
+}
 const REQUIRED = { list_add: ['LIST', 'VALUE'], list_remove: ['LIST', 'VALUE'], list_clear: ['LIST'], list_get: ['LIST', 'INDEX'],
   list_set: ['LIST', 'INDEX', 'VALUE'], list_count: ['LIST'], list_contains: ['LIST', 'VALUE'], list_foreach: ['LIST'], var_set: ['VALUE'],
   expr_stmt: ['EXPR'], instantiate: ['PREFAB'], controls_if: ['IF0'], controls_whileUntil: ['BOOL'], logic_compare: ['A', 'B'],
@@ -15,9 +57,13 @@ const lastWarn = new Map();
 function check() {
   MODEL = model();
   const out = [];
-  const E = (block, msg) => out.push({ block, level: 'error', msg }), W = (block, msg) => out.push({ block, level: 'warn', msg });
+  const E = (block, msg, fixes) => out.push({ block, level: 'error', msg, fixes }), W = (block, msg, fixes) => out.push({ block, level: 'warn', msg, fixes });
   const name = (b, n) => { const v = f(b, n).trim(); if (!/^[A-Za-z_]\w*$/.test(v)) E(b, `名前 '${v}' は使えません`); return v; };
-  const type = (b, t) => { if (!knownType(t)) E(b, `型 '${t}' が見つかりません`); };
+  const type = (b, t, field) => {
+    if (knownType(t)) return;
+    const near = field && /^\w+$/.test(t) && closest(t, [...PRIMS, ...UNITY_TYPES, ...MODEL.keys()]);
+    E(b, `型 '${t}' が見つかりません`, near && [{ label: `'${near}' に修正`, run: () => b.setFieldValue(near, field) }]);
+  };
   const assign = (b, target, vb) => { if (!vb) return; const s = typeOf(vb); if (!assignable(target, s)) E(b, `'${s}' を '${target}' に変換できません`); };
   const want = (b, n, t) => assign(b, t, b.getInputTargetBlock(n));
   const listOf = b => {
@@ -36,7 +82,12 @@ function check() {
     if (t !== '?' && !dictOf(t)) E(b, `'${t}' は Dictionary ではありません`);
     return dictOf(t) || ['?', '?'];
   };
-  const resolved = (b, path) => { const r = resolve(path, scopeOf(b)); if (r.err) E(b, r.err); else if (r.warn) W(b, r.warn); return r; };
+  const resolved = (b, path, field = 'NAME') => {
+    const sc = scopeOf(b), r = resolve(path, sc);
+    if (r.err) E(b, r.err, r.err.endsWith('は定義されていません') && b.getField(field) ? undefinedFixes(b, path, field, sc) : undefined);
+    else if (r.warn) W(b, r.warn);
+    return r;
+  };
   const classNames = new Set(); let monos = 0;
   for (const b of ws.getAllBlocks(true)) {
     if (!b.isEnabled() || b.isShadow()) continue;
@@ -67,10 +118,10 @@ function check() {
         }
         break;
       }
-      case 'field_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
+      case 'field_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim(), 'TYPE'); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
       case 'method_def': {
         const ret = f(b, 'RET').trim();
-        name(b, 'NAME'); type(b, ret);
+        name(b, 'NAME'); type(b, ret, 'RET');
         params(f(b, 'PARAMS')).forEach(([t, n]) => t === '?' ? E(b, `引数 '${n}' の書き方が不正です (例: int a, string b)`) : type(b, t));
         if (ret !== 'void' && !b.getDescendants(false).some(d => (d.type === 'return_stmt' && d.getInputTargetBlock('VALUE')) || d.type.startsWith('yield_')))
           E(b, `'${f(b, 'NAME')}' は ${ret} を return する必要があります`);
@@ -80,7 +131,7 @@ function check() {
         const n = name(b, 'NAME'), t = f(b, 'TYPE').trim();
         if (scopeOf(b).vars.has(n)) E(b, `'${n}' は既に定義されています`);
         if (t === 'var') { if (!b.getInputTargetBlock('VALUE')) E(b, 'var には初期値が必要です'); }
-        else { type(b, t); want(b, 'VALUE', t); }
+        else { type(b, t, 'TYPE'); want(b, 'VALUE', t); }
         break;
       }
       case 'var_set': {
@@ -94,7 +145,7 @@ function check() {
       case 'method_call': case 'method_call_expr': resolved(b, f(b, 'NAME') + '()'); break;
       case 'new_object': {
         const n = f(b, 'NAME').trim();
-        type(b, n);
+        type(b, n, 'NAME');
         if (isMono(MODEL.get(n))) W(b, 'MonoBehaviour は new できません。AddComponent<T>() を使ってください');
         break;
       }
@@ -106,10 +157,10 @@ function check() {
         else assign(b, m.ret, vb);
         break;
       }
-      case 'list_new': type(b, f(b, 'TYPE').trim()); break;
+      case 'list_new': type(b, f(b, 'TYPE').trim(), 'TYPE'); break;
       case 'get_component': {
         const t = f(b, 'TYPE').trim();
-        type(b, t);
+        type(b, t, 'TYPE');
         if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
         break;
       }
@@ -122,7 +173,7 @@ function check() {
         if (dictOf(typeOf(b.getInputTargetBlock('LIST')))) break;
         const el = listOf(b), t = f(b, 'TYPE').trim();
         name(b, 'VAR');
-        if (t !== 'var') { type(b, t); if (!assignable(t, el)) E(b, `'${el}' を '${t}' に変換できません`); }
+        if (t !== 'var') { type(b, t, 'TYPE'); if (!assignable(t, el)) E(b, `'${el}' を '${t}' に変換できません`); }
         break;
       }
       case 'controls_if': for (let i = 0; b.getInput('IF' + i); i++) want(b, 'IF' + i, 'bool'); break;
@@ -143,7 +194,7 @@ function check() {
         f(b, 'VALUES').split(',').map(s => s.trim()).filter(Boolean).forEach(s => { if (!/^[A-Za-z_]\w*(\s*=\s*-?\d+)?$/.test(s)) E(b, `値 '${s}' は使えません`); });
         break;
       }
-      case 'property_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); break;
+      case 'property_def': name(b, 'NAME'); type(b, f(b, 'TYPE').trim(), 'TYPE'); break;
       case 'constructor_def': case 'coroutine_def':
         if (b.type === 'coroutine_def') {
           name(b, 'NAME');
@@ -184,7 +235,7 @@ function check() {
       }
       case 'add_component': {
         const t = f(b, 'TYPE').trim();
-        type(b, t);
+        type(b, t, 'TYPE');
         if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
         break;
       }
@@ -193,12 +244,12 @@ function check() {
       case 'class_attr': { const nx = b.getNextBlock(); if (!nx || !['class_def', 'class_attr'].includes(nx.type)) W(b, 'クラス属性の下にクラスをつなげてください'); break; }
       case 'for_step': name(b, 'VAR'); want(b, 'FROM', 'int'); want(b, 'TO', 'int'); break;
       case 'do_while': want(b, 'COND', 'bool'); break;
-      case 'try_catch': type(b, f(b, 'TYPE').trim()); name(b, 'VAR'); break;
+      case 'try_catch': type(b, f(b, 'TYPE').trim(), 'TYPE'); name(b, 'VAR'); break;
       case 'interp_string':
         for (const m of f(b, 'TEXT').matchAll(/\{([^{}:]+)(?::[^{}]*)?\}/g)) if (/^[A-Za-z_][\w.]*$/.test(m[1].trim())) resolved(b, m[1].trim());
         break;
       case 'string_check': case 'parse_num': want(b, 'VALUE', 'string'); break;
-      case 'cast_any': case 'as_expr': case 'is_type': case 'array_init': type(b, f(b, 'TYPE').trim()); break;
+      case 'cast_any': case 'as_expr': case 'is_type': case 'array_init': type(b, f(b, 'TYPE').trim(), 'TYPE'); break;
       case 'vector2_new': want(b, 'X', 'float'); want(b, 'Y', 'float'); break;
       case 'quaternion_lerp': want(b, 'A', 'Quaternion'); want(b, 'B', 'Quaternion'); want(b, 'T', 'float'); break;
       case 'quaternion_look': want(b, 'DIR', 'Vector3'); break;
@@ -207,7 +258,7 @@ function check() {
       case 'instantiate_rot': want(b, 'POS', 'Vector3'); want(b, 'ROT', 'Quaternion'); break;
       case 'try_get_component_if': {
         const t = f(b, 'TYPE').trim();
-        type(b, t); name(b, 'VAR');
+        type(b, t, 'TYPE'); name(b, 'VAR');
         if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
         break;
       }
@@ -223,8 +274,8 @@ function check() {
       case 'gizmos_line': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); break;
       case 'draw_line': want(b, 'A', 'Vector3'); want(b, 'B', 'Vector3'); want(b, 'COLOR', 'Color'); break;
       case 'button_listener_lambda': want(b, 'OBJ', 'Button'); break;
-      case 'property_expr': name(b, 'NAME'); type(b, f(b, 'TYPE').trim()); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
-      case 'new_object_init': type(b, f(b, 'NAME').trim()); break;
+      case 'property_expr': name(b, 'NAME'); type(b, f(b, 'TYPE').trim(), 'TYPE'); want(b, 'VALUE', f(b, 'TYPE').trim()); break;
+      case 'new_object_init': type(b, f(b, 'NAME').trim(), 'NAME'); break;
       case 'init_assign': {
         if (!par || par.type !== 'new_object_init') { E(b, 'new { } (オブジェクト初期化子) の中に置いてください'); break; }
         const t = f(par, 'NAME').trim(), mem = membersOf(t), n = f(b, 'NAME').trim();
@@ -233,12 +284,12 @@ function check() {
         break;
       }
       case 'switch_arm': if (!par || par.type !== 'switch_expr') E(b, 'switch 式の中に置いてください'); break;
-      case 'tuple_assign': resolved(b, f(b, 'NAME1')); resolved(b, f(b, 'NAME2')); break;
-      case 'array_new': type(b, f(b, 'TYPE').trim()); want(b, 'SIZE', 'int'); break;
+      case 'tuple_assign': resolved(b, f(b, 'NAME1'), 'NAME1'); resolved(b, f(b, 'NAME2'), 'NAME2'); break;
+      case 'array_new': type(b, f(b, 'TYPE').trim(), 'TYPE'); want(b, 'SIZE', 'int'); break;
       case 'generic_call': case 'call_on': {
         const n = f(b, 'NAME').trim(), t = b.getInputTargetBlock('OBJ') ? typeOf(b.getInputTargetBlock('OBJ')) : '?', mem = membersOf(t);
         if (b.type === 'generic_call') {
-          type(b, f(b, 'TYPE').trim());
+          type(b, f(b, 'TYPE').trim(), 'TYPE');
           if (/Component/.test(n) && MODEL.has(f(b, 'TYPE').trim()) && !isMono(MODEL.get(f(b, 'TYPE').trim()))) E(b, `'${f(b, 'TYPE').trim()}' はコンポーネントではありません`);
         }
         if (mem && !(n + '()' in mem)) (MODEL.has(t) ? E : W)(b, `'${t}' に ${n} はありません`);
@@ -246,7 +297,7 @@ function check() {
       }
       case 'raycast_if': name(b, 'HIT'); want(b, 'ORIGIN', 'Vector3'); want(b, 'DIR', 'Vector3'); want(b, 'DIST', 'float'); break;
       case 'raycast_mouse_if': name(b, 'HIT'); want(b, 'DIST', 'float'); break;
-      case 'hit_get': { const r = resolved(b, f(b, 'HIT')); if (!r.err && !['RaycastHit', '?'].includes(r.type)) E(b, `'${f(b, 'HIT')}' は RaycastHit ではありません`); break; }
+      case 'hit_get': { const r = resolved(b, f(b, 'HIT'), 'HIT'); if (!r.err && !['RaycastHit', '?'].includes(r.type)) E(b, `'${f(b, 'HIT')}' は RaycastHit ではありません`); break; }
       case 'draw_ray': want(b, 'ORIGIN', 'Vector3'); want(b, 'DIR', 'Vector3'); want(b, 'COLOR', 'Color'); break;
       case 'ui_set_text': case 'prop_set': case 'prop_get': {
         const t = typeOf(b.getInputTargetBlock('OBJ')), mem = membersOf(t), p = b.type === 'ui_set_text' ? 'text' : f(b, 'PROP').trim();
@@ -265,7 +316,7 @@ function check() {
       case 'list_insert': want(b, 'VALUE', listOf(b)); want(b, 'INDEX', 'int'); break;
       case 'list_index_of': want(b, 'VALUE', listOf(b)); break;
       case 'list_order': listOf(b); break;
-      case 'dict_new': type(b, f(b, 'KEY').trim()); type(b, f(b, 'VAL').trim()); break;
+      case 'dict_new': type(b, f(b, 'KEY').trim(), 'KEY'); type(b, f(b, 'VAL').trim(), 'VAL'); break;
       case 'dict_add': { const [k, val] = dictOfBlock(b); want(b, 'KEY', k); want(b, 'VALUE', val); break; }
       case 'dict_contains': case 'dict_remove': want(b, 'KEY', dictOfBlock(b)[0]); break;
 

@@ -1,16 +1,10 @@
 // 起動と画面の操作 (コード表示・保存・取り消し・読み込みダイアログ・読み込みログ)
 // ---------- 起動 ----------
 const ws = Blockly.inject('blocks', {
-  toolbox, renderer: 'zelos', media: 'vendor/blockly/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
+  toolbox, renderer: 'zelos', comments: true, media: 'vendor/blockly/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
   zoom: { controls: true, wheel: false, startScale: 0.75 }, grid: { spacing: 24, length: 2, colour: '#ddd', snap: true },
 });
-const KEY = 'unity-block-coder';
 const load = data => { Blockly.Events.setGroup(true); ws.clear(); Blockly.serialization.workspaces.load(data, ws); Blockly.Events.setGroup(false); };
-let saved = null;
-try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
-Blockly.Events.disable();
-try { load(saved || sample); } catch (e) { load(sample); }
-Blockly.Events.enable();
 
 const KW = new Set('using public private protected internal static class void int float bool string var new return if else for foreach in while break continue true false null this base default'.split(' '));
 const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -27,35 +21,77 @@ function hl(code) {
   return out + esc(code.slice(last));
 }
 
-let code = '', fileName = 'Script.cs';
+let code = '', fileName = 'Script.cs', blockRanges = new Map(), issues = [], selectedId = null;
 function update() {
-  code = cs.workspaceToCode(ws);
-  const mono = ws.getAllBlocks(true).find(b => b.type === 'class_def' && f(b, 'BASE').trim() === 'MonoBehaviour')
-            || ws.getAllBlocks(true).find(b => b.type === 'class_def');
-  fileName = (mono ? f(mono, 'NAME') : 'Script') + '.cs';
+  const g = generate(ws);
+  code = g.code; blockRanges = g.ranges;
+  fileName = scriptName(ws);
   document.getElementById('fname').textContent = fileName;
-  const issues = [...syntaxErrors(code), ...check()];
+  issues = [...syntaxErrors(code), ...check()];
   const errLines = new Set(issues.filter(x => x.line).map(x => x.line));
   document.getElementById('code').innerHTML = hl(code).split('\n').map((l, i) => `<span class="ln${errLines.has(i + 1) ? ' err' : ''}" data-l="${i + 1}">${l}</span>`).join('');
   const nE = issues.filter(x => x.level === 'error').length, nW = issues.length - nE;
   const st = document.getElementById('status');
   st.textContent = nE || nW ? `✖ ${nE}  ⚠ ${nW}` : '✔ OK';
   st.style.color = nE ? '#ff6b6b' : nW ? '#f5c04a' : '#7bd88f';
-  const box = document.getElementById('issues');
-  box.innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(x.msg)}<small>${x.line ? '行 ' + x.line : esc(x.block.toString(28))}</small></div>`).join('')
+  document.getElementById('issues').innerHTML = (issues.length ? issues.map((x, i) => `<div class="issue ${x.level}" data-i="${i}"><b>${x.level === 'error' ? '✖' : '⚠'}</b> ${esc(x.msg)}`
+      + `<small>${x.line ? '行 ' + x.line : esc(x.block.toString(28))}</small>`
+      + (x.fixes || []).map((fx, j) => `<button class="fix" data-f="${i}:${j}" title="クリックで修正">${esc(fx.label)}</button>`).join('') + '</div>').join('')
     : '<div class="ok">✔ エラーはありません</div>') + (tsState ? `<div><small>${tsState}</small></div>` : '');
-  box.onclick = e => {
-    const d = e.target.closest('.issue'); if (!d) return;
-    const x = issues[+d.dataset.i];
-    if (x.block) { ws.centerOnBlock(x.block.id); x.block.select(); }
-    else document.querySelector(`.ln[data-l="${x.line}"]`)?.scrollIntoView({ block: 'center' });
-  };
   document.getElementById('undo').disabled = !ws.getUndoStack().length;
   document.getElementById('redo').disabled = !ws.getRedoStack().length;
-  try { localStorage.setItem(KEY, JSON.stringify(Blockly.serialization.workspaces.save(ws))); } catch (e) {}
+  highlightBlock(selectedId);
+  if (typeof saveProject === 'function') saveProject();
 }
+document.getElementById('issues').onclick = e => {
+  const fx = e.target.closest('.fix');
+  if (fx) {
+    const [i, j] = fx.dataset.f.split(':').map(Number);
+    Blockly.Events.setGroup(true);
+    try { issues[i].fixes[j].run(); } finally { Blockly.Events.setGroup(false); }
+    return;
+  }
+  const d = e.target.closest('.issue'); if (!d) return;
+  const x = issues[+d.dataset.i];
+  if (x.block) { ws.centerOnBlock(x.block.id); Blockly.common.setSelected(x.block); }
+  else document.querySelector(`.ln[data-l="${x.line}"]`)?.scrollIntoView({ block: 'center' });
+};
 ws.addChangeListener(e => { if (!e.isUiEvent) update(); });
-update();
+
+// ブロックを選ぶと対応する C# の行をハイライト。行をクリックするとブロックを選ぶ
+function highlightBlock(id) {
+  selectedId = id;
+  document.querySelectorAll('#code .ln.hl').forEach(l => l.classList.remove('hl'));
+  let b = id && ws.getBlockById(id);
+  while (b && !blockRanges.has(b.id)) b = b.getParent();
+  if (!b) return 0;
+  const [s, e] = blockRanges.get(b.id);
+  for (let l = s; l <= e; l++) document.querySelector(`#code .ln[data-l="${l}"]`)?.classList.add('hl');
+  return s;
+}
+ws.addChangeListener(e => {
+  if (e.type !== Blockly.Events.SELECTED) return;
+  const s = highlightBlock(e.newElementId);
+  if (s) document.querySelector(`#code .ln[data-l="${s}"]`)?.scrollIntoView({ block: 'nearest' });
+});
+document.getElementById('code').onclick = e => {
+  const ln = e.target.closest('.ln');
+  if (!ln) return;
+  const line = +ln.dataset.l;
+  let best = null, size = Infinity;
+  blockRanges.forEach(([s, en], id) => { if (s <= line && line <= en && en - s < size) { size = en - s; best = id; } });
+  const b = best && ws.getBlockById(best);
+  if (b) { ws.centerOnBlock(b.id); Blockly.common.setSelected(b); }
+};
+// ブロックのメモを C# のコメントとして出力するか
+const MEMO_KEY = 'unity-block-coder-memo';
+try { cs.exportMemo = localStorage.getItem(MEMO_KEY) === '1'; } catch (e) {}
+document.getElementById('memoOut').checked = !!cs.exportMemo;
+document.getElementById('memoOut').onchange = e => {
+  cs.exportMemo = e.target.checked;
+  try { localStorage.setItem(MEMO_KEY, e.target.checked ? '1' : '0'); } catch (err) {}
+  update();
+};
 
 document.getElementById('sample').onclick = () => load(sample);
 document.getElementById('clear').onclick = () => { Blockly.Events.setGroup(true); ws.clear(); Blockly.Events.setGroup(false); };
@@ -84,27 +120,49 @@ window.addEventListener('resize', () => Blockly.svgResize(ws));
 // C# 読込ダイアログ
 const dlg = document.getElementById('importDlg'), msg = document.getElementById('importMsg'), toast = document.getElementById('toast');
 let toastTimer;
+function showToast(text, ms = 8000) {
+  toast.textContent = text; toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.hidden = true, ms);
+}
 document.getElementById('import').onclick = () => { msg.textContent = ''; dlg.showModal(); };
 document.getElementById('importCancel').onclick = () => dlg.close();
-document.getElementById('importFile').onchange = async e => {
-  const file = e.target.files[0];
-  if (file) { document.getElementById('importSrc').value = await file.text(); srcName = file.name; }
+const importSrc = document.getElementById('importSrc'), importFile = document.getElementById('importFile'), SRC_PLACEHOLDER = importSrc.placeholder;
+let srcName = '貼り付けたコード', srcFiles = [];
+importFile.onchange = async e => {
+  srcFiles = [...e.target.files];
+  if (srcFiles.length === 1) { importSrc.value = await srcFiles[0].text(); srcName = srcFiles[0].name; srcFiles = []; }
+  else if (srcFiles.length > 1) { importSrc.value = ''; importSrc.placeholder = `${srcFiles.length} 個のファイルを選びました。それぞれ新しいタブで開きます`; }
 };
-let srcName = '貼り付けたコード';
-document.getElementById('importSrc').addEventListener('input', () => srcName = '貼り付けたコード');
-document.getElementById('importGo').onclick = () => {
-  const src = document.getElementById('importSrc').value;
-  if (!src.trim()) { msg.textContent = 'C# コードを入力してください'; return; }
+importSrc.addEventListener('input', () => { srcName = '貼り付けたコード'; srcFiles = []; importSrc.placeholder = SRC_PLACEHOLDER; });
+document.getElementById('importGo').onclick = async () => {
+  const toNewTab = document.getElementById('importNewTab').checked, append = document.getElementById('importAppend').checked;
+  if (!srcFiles.length && !importSrc.value.trim()) { msg.textContent = 'C# コードを入力してください'; return; }
   try {
-    const r = importCs(src, document.getElementById('importAppend').checked);
+    let r;
+    if (srcFiles.length) {
+      // 複数ファイル: それぞれ新しいタブに
+      r = { count: 0, log: [], notes: [] };
+      for (const file of srcFiles) {
+        newTab({});
+        const x = importCs(await file.text(), false);
+        ws.clearUndo();
+        collect(x, file.name);
+        r.count += x.count; r.log.push(...x.log); x.notes.forEach(n => r.notes.includes(n) || r.notes.push(n));
+      }
+    } else {
+      if (toNewTab && !append) newTab({});
+      r = importCs(importSrc.value, append);
+      if (toNewTab && !append) ws.clearUndo();
+      collect(r, srcName);
+    }
+    const files = srcFiles.length;
     dlg.close();
+    srcFiles = []; importFile.value = ''; importSrc.placeholder = SRC_PLACEHOLDER;
     const kinds = renderLog(r);
-    collect(r, srcName);
-    toast.textContent = `${r.count} 個のブロックに変換しました` + (r.log.length ? `\n足りないブロック ${kinds} 種類 / ${r.log.length} か所 → 右の「読み込みログ」の「依頼文を作成」でまとめられます` : '')
-      + '\n(取り消しで元に戻せます)';
-    toast.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.hidden = true, 8000);
+    showToast(`${r.count} 個のブロックに変換しました` + (files ? ` (${files} ファイル)` : '')
+      + (r.log.length ? `\n足りないブロック ${kinds} 種類 / ${r.log.length} か所 → 右の「読み込みログ」の「依頼文を作成」でまとめられます` : '')
+      + (toNewTab || files ? '\n(新しいタブで開きました)' : '\n(取り消しで元に戻せます)'));
   } catch (err) { msg.textContent = '変換できませんでした: ' + err.message; }
 };
 toast.onclick = () => toast.hidden = true;
@@ -200,7 +258,7 @@ function renderLog(r) {
     }
     const d = e.target.closest('.issue');
     const blk = d && ws.getBlockById(r.log[+d.dataset.i].id);
-    if (blk) { ws.centerOnBlock(blk.id); blk.select(); }
+    if (blk) { ws.centerOnBlock(blk.id); Blockly.common.setSelected(blk); }
   };
   document.getElementById('tabLog').textContent = `読み込みログ${r.log.length ? ` (${r.log.length})` : ''}`;
   console.log(text);

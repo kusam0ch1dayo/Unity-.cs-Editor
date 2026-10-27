@@ -1,9 +1,10 @@
 // オフライン用のサービスワーカー (GitHub Pages などの http(s) で開いたときだけ有効)。
 // ネットにつながるときは最新を取得してキャッシュを更新し、つながらないときはキャッシュを返す。
-const CACHE = 'unity-block-coder-v1';
+const CACHE = 'unity-block-coder-v2';
 const FILES = [
   './', 'index.html', 'css/style.css',
   'js/blocks.js', 'js/generator.js', 'js/toolbox.js', 'js/types.js', 'js/checker.js', 'js/autocomplete.js', 'js/importer.js', 'js/app.js',
+  'js/theme.js', 'js/search.js', 'js/refactor.js', 'js/project.js', 'js/templates.js',
   'vendor/blockly/blockly_compressed.js', 'vendor/blockly/blocks_compressed.js', 'vendor/blockly/msg/ja.js', 'vendor/blockly/msg/en.js',
   'vendor/blockly/media/sprites.png', 'vendor/blockly/media/sprites.svg',
   'vendor/tree-sitter/tree-sitter.js', 'vendor/tree-sitter/tree-sitter-wasm.js', 'vendor/tree-sitter/tree-sitter-c_sharp-wasm.js',
