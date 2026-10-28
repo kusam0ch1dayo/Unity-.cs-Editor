@@ -224,9 +224,10 @@ header h1 { flex: none; white-space: nowrap; }
 
 /* ツールボックス (カテゴリの一覧) */
 .blocklyToolboxDiv { padding: 6px 0 !important; border-right: 1px solid var(--border); }
-.blocklyTreeRow { height: auto !important; line-height: 1.2 !important; padding: 6px 12px 6px 8px !important; margin: 1px 6px !important; border-left-width: 4px !important;
-  border-radius: 6px; transition: background-color .1s; }
-.blocklyTreeRow:not(.blocklyTreeSelected):hover { background: var(--hover) !important; }
+.blocklyTreeRow { height: auto !important; line-height: 1.2 !important; padding: 6px 12px 6px 8px !important; margin: 2px 6px !important; border-left-width: 6px !important;
+  border-radius: 7px; transition: background-color .1s; background: color-mix(in srgb, var(--cat, transparent) 13%, transparent); }
+.blocklyTreeRow:not(.blocklyTreeSelected):hover { background: color-mix(in srgb, var(--cat, transparent) 26%, transparent) !important; }
+html.ws-dark .blocklyTreeRow { background: color-mix(in srgb, var(--cat, transparent) 18%, transparent); }
 .blocklyTreeLabel { font: 13px system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; }
 .blocklyTreeSelected .blocklyTreeLabel { font-weight: 600; }
 .blocklyFlyoutLabelText { font-weight: 600; }

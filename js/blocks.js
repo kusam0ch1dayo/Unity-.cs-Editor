@@ -1,6 +1,13 @@
 // ブロックの見た目と入出力の定義
 // ---------- ブロック定義 ----------
 const C = { cls: 290, var: 330, unity: 20, list: 260, misc: 0 };
+// ブロックの色の鮮やかさ [彩度, 明るさ] (設定の「テーマ」タブ)。色はブロックを作るときに決まるので、ここで先に設定する
+const BLOCK_VIVID = { calm: [0.45, 0.65], vivid: [0.62, 0.76], max: [0.78, 0.84] };
+function setBlockVivid(v) {
+  const [sat, val] = BLOCK_VIVID[v] || BLOCK_VIVID.vivid;
+  Blockly.utils.colour.setHsvSaturation(sat); Blockly.utils.colour.setHsvValue(val);
+}
+try { setBlockVivid((JSON.parse(localStorage.getItem('unity-block-coder-colors')) || {}).vivid); } catch (e) { setBlockVivid(); }
 // 修飾子。'none' は修飾子なし (ドロップダウンでは「(なし)」)
 const opt = a => [a === 'none' ? '(なし)' : a, a];
 const ACCESS = [...['public', 'private', 'protected', 'internal', ''].flatMap(a => ['', 'static', 'readonly', 'static readonly', 'const'].map(x => [a, x].filter(Boolean).join(' ') || 'none')),

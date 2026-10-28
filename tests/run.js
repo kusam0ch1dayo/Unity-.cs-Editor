@@ -326,6 +326,12 @@ async function qolTests(browser, base) {
   check('テーマカラーを選ぶと画面の色が変わる', await css('--accent') === '#d6407f');
   await p4.evaluate(() => { const i = document.querySelector('#settingsBody [data-color="bg"]'); i.value = '#fff8e1'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
   check('背景の色を自分で選べる', await css('--bg') === '#fff8e1');
+  const blockColor = () => p4.evaluate(() => ws.getAllBlocks(false).find(b => b.type === 'class_def').getColour());
+  const vividColor = await blockColor();
+  check('ブロックの色は既定で鮮やか', await p4.evaluate(() => Blockly.utils.colour.getHsvSaturation() === BLOCK_VIVID.vivid[0]));
+  await p4.click('#settingsBody [data-theme-set="vivid"][data-v="calm"]');
+  check('ブロックの色の鮮やかさを変えると、置いてあるブロックの色も変わる', await blockColor() !== vividColor && await p4.evaluate(() => code.includes('class PlayerController')));
+  check('カテゴリの行がそのカテゴリの色で色付けされる', await p4.evaluate(() => [...document.querySelectorAll('.blocklyTreeRow')].filter(r => r.style.getPropertyValue('--cat')).length > 10));
   await p4.click('#settingsBody [data-theme-set="code"][data-v="dark"]');
   check('コードの配色を暗くできる', await p4.evaluate(() => document.documentElement.dataset.code === 'dark'));
   await p4.click('#settingsBody [data-theme-set="mode"][data-v="dark"]');

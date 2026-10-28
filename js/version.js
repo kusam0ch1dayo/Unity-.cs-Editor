@@ -1,7 +1,12 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.9.0': [
+    ['ブロックとツールボックスの色を鮮やかに', 'More vivid block and toolbox colors'],
+    ['ツールボックスのカテゴリを、それぞれの色でうっすら色付け', 'Toolbox categories are tinted with their own color'],
+    ['設定の「テーマ」タブで、ブロックの色の鮮やかさ (落ち着いた / 鮮やか / とても鮮やか) を選べます', 'Choose the block color intensity (Calm / Vivid / Very vivid) in the Theme tab'],
+  ],
   '1.8.0': [
     ['ライトモードを明るく。C# の表示や下のパネルも明るい配色に', 'A brighter light mode, including the C# view and bottom panels'],
     ['設定をタブ (一般 / テーマ / ショートカット / 拡張) に整理', 'Settings are now organized in tabs (General / Theme / Shortcuts / Extensions)'],

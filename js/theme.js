@@ -11,7 +11,7 @@ const PALETTES = {
 // 自分で変えられる色 (CSS 変数名, 表示名)
 const CUSTOM_COLORS = [['accent', ['アクセント', 'Accent']], ['bg', ['背景', 'Background']], ['panel', ['パネル', 'Panels']], ['fg', ['文字', 'Text']], ['code-bg', ['コードの背景', 'Code background']]];
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
-let themeMode = 'auto', colors = { palette: 'blue', code: 'auto', custom: { light: {}, dark: {} } };
+let themeMode = 'auto', colors = { palette: 'blue', code: 'auto', vivid: 'vivid', custom: { light: {}, dark: {} } };
 try { themeMode = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}
 try { const c = JSON.parse(localStorage.getItem(COLORS_KEY)); if (c) colors = { ...colors, ...c, custom: { light: {}, dark: {}, ...(c.custom || {}) } }; } catch (e) {}
 const saveColors = () => { try { localStorage.setItem(COLORS_KEY, JSON.stringify(colors)); } catch (e) {} };
@@ -30,10 +30,10 @@ function themeColors() {
     : { accent, bg: mix('#f7f8fb', accent, 0.035), panel: '#ffffff', fg: '#1d1f23' };   // ライトは背景にアクセント色を少しだけ混ぜる
   return { ...base, ...colors.custom[dark ? 'dark' : 'light'] };
 }
-const darkBlockly = Blockly.Theme.defineTheme('ubc-dark', { base: Blockly.Themes.Classic, componentStyles: {
-  workspaceBackgroundColour: '#1a1b1f', toolboxBackgroundColour: '#1f2126', toolboxForegroundColour: '#d8dae0',
-  flyoutBackgroundColour: '#2a2c32', flyoutForegroundColour: '#d8dae0', flyoutOpacity: 0.96,
-  scrollbarColour: '#4a4d55', scrollbarOpacity: 0.7, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
+// Blockly 標準のブロック (if・ループ・数値・文字など) の色。標準の色相のまま、鮮やかさの設定に合わせて作る
+const STYLE_HUES = { logic: 210, loop: 120, math: 230, text: 160, list: 260, colour: 20, variable: 330, variable_dynamic: 310, procedure: 290 };
+const blockStyles = () => Object.fromEntries(Object.entries(STYLE_HUES).map(([k, h]) => [k + '_blocks', { colourPrimary: Blockly.utils.colour.hueToHex(h) }]));
+const categoryStyles = () => Object.fromEntries(Object.entries(STYLE_HUES).map(([k, h]) => [k + '_category', { colour: Blockly.utils.colour.hueToHex(h) }]));
 function applyTheme() {
   const dark = isDark(), c = themeColors(), root = document.documentElement;
   if (themeMode === 'auto') delete root.dataset.theme; else root.dataset.theme = themeMode;
@@ -51,7 +51,7 @@ function applyTheme() {
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c.accent);
   // ブロックの作業場所の色もそろえる
-  ws.setTheme(dark && !colors.custom.dark.bg && !colors.custom.dark.panel ? darkBlockly : Blockly.Theme.defineTheme(dark ? 'ubc-user-dark' : 'ubc-user-light', { base: Blockly.Themes.Classic, componentStyles: {
+  ws.setTheme(Blockly.Theme.defineTheme(dark ? 'ubc-dark' : 'ubc-light', { base: Blockly.Themes.Classic, blockStyles: blockStyles(), categoryStyles: categoryStyles(), componentStyles: {
     workspaceBackgroundColour: mix(c.bg, c.panel, dark ? 0.3 : 0.7), toolboxBackgroundColour: c.panel, toolboxForegroundColour: c.fg,
     flyoutBackgroundColour: mix(c.bg, c.fg, dark ? 0.06 : 0.03), flyoutForegroundColour: c.fg, flyoutOpacity: 0.97,
     scrollbarColour: mix(c.panel, c.fg, 0.35), scrollbarOpacity: 0.6, insertionMarkerColour: dark ? '#ffffff' : '#000000', insertionMarkerOpacity: 0.3, cursorColour: c.fg } }));
@@ -67,6 +67,7 @@ function themeSettings() {
   const seg = (key, cur, items) => `<div class="seg" role="radiogroup">${items.map(([v, l]) => `<button data-theme-set="${key}" data-v="${v}" class="${v === cur ? 'on' : ''}" aria-pressed="${v === cur}">${esc(l)}</button>`).join('')}</div>`;
   return `<section><h3>${pick(['表示モード', 'Mode'])}</h3>`
     + `<div class="set-row"><span>${pick(['明るさ', 'Brightness'])}</span>${seg('mode', themeMode, [['auto', THEME_LABEL.auto], ['light', THEME_LABEL.light], ['dark', THEME_LABEL.dark]])}</div>`
+    + `<div class="set-row"><span>${pick(['ブロックの色', 'Block colors'])}</span>${seg('vivid', colors.vivid || 'vivid', [['calm', pick(['落ち着いた', 'Calm'])], ['vivid', pick(['鮮やか', 'Vivid'])], ['max', pick(['とても鮮やか', 'Very vivid'])]])}</div>`
     + `<div class="set-row"><span>${pick(['コードの配色', 'Code colors'])}</span>${seg('code', colors.code, [['auto', pick(['画面に合わせる', 'Match'])], ['light', pick(['明るい', 'Light'])], ['dark', pick(['暗い', 'Dark'])]])}</div></section>`
     + `<section><h3>${pick(['テーマカラー', 'Theme color'])}</h3><div class="swatches">`
     + Object.entries(PALETTES).map(([id, [name, l, d]]) => `<button class="swatch${id === colors.palette ? ' on' : ''}" data-theme-set="palette" data-v="${id}" title="${esc(pick(name))}" aria-pressed="${id === colors.palette}">`
@@ -77,6 +78,15 @@ function themeSettings() {
       + `<input type="color" data-color="${k}" value="${k === 'code-bg' ? custom[k] || getComputedStyle(document.documentElement).getPropertyValue('--code-bg').trim() : c[k]}">`
       + (custom[k] ? `<button data-color-reset="${k}" title="${pick(['元に戻す', 'Reset'])}">↺</button>` : '') + '</span></label>').join('')
     + `<div class="row end"><button data-theme-set="resetAll">${pick(['テーマを初期設定に戻す', 'Reset theme'])}</button></div></section>`;
+}
+// 鮮やかさを変えたら、置いてあるブロックとツールボックスを作り直して新しい色にする (ID は同じなので取り消しの記録はそのまま使える)
+function recolorBlocks() {
+  applyTheme();
+  const state = Blockly.serialization.workspaces.save(ws);
+  Blockly.Events.disable();
+  try { ws.clear(); Blockly.serialization.workspaces.load(state, ws); } finally { Blockly.Events.enable(); }
+  refreshToolbox();
+  update();
 }
 // 設定画面での操作 (click / change / input)。扱ったら true
 function handleThemeSettings(e) {
@@ -93,8 +103,11 @@ function handleThemeSettings(e) {
   const key = b.dataset.themeSet, v = b.dataset.v;
   if (key === 'mode') setThemeMode(v);
   if (key === 'code') colors.code = v;
+  if (key === 'vivid') { colors.vivid = v; setBlockVivid(v); saveColors(); recolorBlocks(); }
   if (key === 'palette') { colors.palette = v; delete colors.custom[mode].accent; }
-  if (key === 'resetAll' && confirm(pick(['テーマの設定をすべて初期設定に戻しますか？', 'Reset all theme settings?']))) { colors = { palette: 'blue', code: 'auto', custom: { light: {}, dark: {} } }; setThemeMode('auto'); }
+  if (key === 'resetAll' && confirm(pick(['テーマの設定をすべて初期設定に戻しますか？', 'Reset all theme settings?']))) {
+    colors = { palette: 'blue', code: 'auto', vivid: 'vivid', custom: { light: {}, dark: {} } }; setBlockVivid('vivid'); setThemeMode('auto'); recolorBlocks();
+  }
   saveColors(); applyTheme(); renderSettings();
   return true;
 }

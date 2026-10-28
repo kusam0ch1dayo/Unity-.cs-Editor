@@ -173,6 +173,8 @@ function refreshToolbox() {
   const adapted = typeof adaptToolboxJson === 'function' ? adaptToolboxJson(base) : base;
   activeToolbox = { kind: 'categoryToolbox', contents: extra ? [...adapted, extra] : adapted };
   ws.updateToolbox(activeToolbox);
+  // カテゴリの行を、そのカテゴリの色でうっすら色付けする (CSS の --cat で使う)
+  document.querySelectorAll('.blocklyToolboxDiv .blocklyTreeRow').forEach(r => r.style.setProperty('--cat', r.style.borderLeftColor));
   searchIndex = null;
 }
 document.getElementById('beginner').onclick = () => {
