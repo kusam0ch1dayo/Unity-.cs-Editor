@@ -4,8 +4,8 @@ importScripts('js/version.js');
 const CACHE = 'unity-block-coder-v' + APP_VERSION;   // バージョンを上げるとキャッシュも作り直される
 const FILES = [
   './', 'index.html', 'css/style.css', 'js/version.js', 'js/i18n.js', 'js/help-data.js',
-  'js/blocks.js', 'js/generator.js', 'js/toolbox.js', 'js/types.js', 'js/checker.js', 'js/unityver.js', 'js/autocomplete.js', 'js/importer.js', 'js/app.js',
-  'js/theme.js', 'js/search.js', 'js/refactor.js', 'js/project.js', 'js/templates.js', 'js/packs.js', 'js/packs/ai-navigation.js', 'js/packs/input-system.js', 'js/learn.js', 'js/projectfile.js', 'js/snippets.js', 'js/pwa.js', 'js/editor.js', 'js/diff.js', 'js/assets.js', 'js/paste.js', 'js/menu.js',
+  'js/blocks.js', 'js/generator.js', 'js/codestyle.js', 'js/toolbox.js', 'js/types.js', 'js/checker.js', 'js/unityver.js', 'js/autocomplete.js', 'js/importer.js', 'js/app.js',
+  'js/theme.js', 'js/search.js', 'js/refactor.js', 'js/project.js', 'js/templates.js', 'js/packs.js', 'js/packs/ai-navigation.js', 'js/packs/input-system.js', 'js/learn.js', 'js/projectfile.js', 'js/snippets.js', 'js/pwa.js', 'js/editor.js', 'js/diff.js', 'js/assets.js', 'js/paste.js', 'js/inspector.js', 'js/tools.js', 'js/menu.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'vendor/blockly/blockly_compressed.js', 'vendor/blockly/blocks_compressed.js', 'vendor/blockly/msg/ja.js', 'vendor/blockly/msg/en.js',
   'vendor/blockly/media/sprites.png', 'vendor/blockly/media/sprites.svg',

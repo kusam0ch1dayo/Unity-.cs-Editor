@@ -78,14 +78,14 @@ edText.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); clearTimeout(edTimer); checkEditor(); applyEditor(); return; }
   if (e.key === 'Tab') {   // Tab は 4 文字の字下げ
     e.preventDefault();
-    document.execCommand('insertText', false, '    ');
+    document.execCommand('insertText', false, cs.INDENT);
   } else if (e.key === 'Enter') {   // 改行したら前の行の字下げをそろえる ({ の後は 1 段深く)
     e.preventDefault();
-    const line = v.slice(v.lastIndexOf('\n', s - 1) + 1, s), indent = line.match(/^\s*/)[0] + (/\{\s*$/.test(line) ? '    ' : '');
+    const line = v.slice(v.lastIndexOf('\n', s - 1) + 1, s), indent = line.match(/^\s*/)[0] + (/\{\s*$/.test(line) ? cs.INDENT : '');
     document.execCommand('insertText', false, '\n' + indent);
   } else if (e.key === '}' && s === en && /^\s+$/.test(v.slice(v.lastIndexOf('\n', s - 1) + 1, s))) {   // 行頭の } は 1 段浅く
     e.preventDefault();
-    const start = v.lastIndexOf('\n', s - 1) + 1, cut = Math.min(4, s - start);
+    const start = v.lastIndexOf('\n', s - 1) + 1, cut = Math.min(cs.INDENT.length, s - start);
     t.setSelectionRange(s - cut, s);
     document.execCommand('insertText', false, '}');
   }

@@ -342,6 +342,7 @@ function check() {
     }
   } finally { Blockly.Events.enable(); }
   if (typeof unityVersionIssues === 'function') out.push(...unityVersionIssues());
+  if (typeof namingIssues === 'function') out.push(...namingIssues());
   return out.filter((x, i) => out.findIndex(y => y.block === x.block && y.msg === x.msg) === i);
 }
 

@@ -268,3 +268,60 @@ html.ws-dark .blocklyTreeRow { background: color-mix(in srgb, var(--cat, transpa
 .swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); font-weight: 600; }
 input[type="color"] { width: 42px; height: 28px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); cursor: pointer; }
 .changed { color: var(--accent); }
+
+/* インスペクターのプレビュー (Unity の見た目に寄せる) */
+#inspector, #outline { max-height: 40%; overflow: auto; font-size: 12.5px; color: var(--code-fg); }
+.ins { margin: 8px 10px; border: 1px solid var(--code-line); border-radius: 8px; overflow: hidden; background: var(--code-bar); }
+.ins-comp { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--code-hover); border-bottom: 1px solid var(--code-line); }
+.ins-comp small { color: var(--code-muted); }
+.ins-row { display: flex; align-items: center; gap: 8px; padding: 3px 10px; cursor: pointer; min-height: 26px; }
+.ins-row:hover { background: var(--code-hover); }
+.ins-row.dim { opacity: .55; cursor: default; }
+.ins-label { flex: 0 0 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ins-label small { color: var(--code-muted); }
+.ins-ctl { flex: 1; display: flex; align-items: center; gap: 4px; min-width: 0; flex-wrap: wrap; }
+.ins-box { flex: 1; min-width: 40px; padding: 2px 6px; border: 1px solid var(--code-border); border-radius: 4px; background: var(--code-bg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ins-box.num { flex: 0 1 70px; } .ins-box.obj { color: var(--code-muted); } .ins-box.area { min-height: 40px; white-space: pre-wrap; }
+.ins-dot { color: var(--code-muted); }
+.ins-check { display: inline-grid; place-items: center; width: 15px; height: 15px; border: 1px solid var(--code-border); border-radius: 3px; background: var(--code-bg); font-size: 10px; }
+.ins-check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ins-vec { display: flex; gap: 4px; flex: 1; align-items: center; } .ins-vec b { font-weight: 400; color: var(--code-muted); } .ins-vec .ins-box { flex: 1; }
+.ins-slider { display: flex; align-items: center; gap: 8px; flex: 1; }
+.ins-slider .track { position: relative; flex: 1; height: 3px; background: var(--code-border); border-radius: 2px; }
+.ins-slider .knob { position: absolute; top: 50%; width: 11px; height: 11px; margin-left: -5px; transform: translateY(-50%); border-radius: 50%; background: var(--code-fg); }
+.ins-color { flex: 1; height: 16px; border-radius: 3px; background: #fff; border: 1px solid var(--code-border); }
+.ins-header { font-weight: 700; padding: 8px 10px 2px; }
+.ins-sub { width: 100%; color: var(--code-muted); }
+.ins-list small, .ins-note { color: var(--code-muted); }
+.ins-empty { padding: 10px; color: var(--code-muted); line-height: 1.6; }
+.ins-tip { margin: 4px 12px 10px; font-size: 11.5px; color: var(--code-muted); }
+/* 目次 */
+.ol { padding: 6px 4px; }
+.ol-row { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 26px; border-radius: 6px; cursor: pointer; margin: 0 4px; }
+.ol-row:hover { background: var(--code-hover); }
+.ol-row.ol-class { padding-left: 10px; margin-top: 4px; }
+.ol-row small { color: var(--code-muted); margin-left: 2px; }
+.ol-ic { width: 16px; text-align: center; color: var(--syn-k); }
+.ol-unity_event { color: var(--code-warn); } .ol-field_def, .ol-property_def, .ol-property_expr { color: var(--syn-t); }
+.ol-uses { margin-left: auto; font-size: 11px; padding: 0 7px; border-radius: 999px; background: var(--code-hover); color: var(--code-muted); }
+/* 使っている場所のハイライト */
+.ubc-usage > .blocklyPath, .ubc-usage > path.blocklyPath { stroke: #ffd43b !important; stroke-width: 3px !important; }
+.ubc-usage { filter: drop-shadow(0 0 4px rgba(255, 212, 59, .9)); }
+/* コマンドパレット */
+#cmdDlg { width: min(620px, calc(100vw - 32px)); padding: 8px; margin-top: 12vh; }
+#cmdInput { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--fg); }
+#cmdInput:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+#cmdList { max-height: 50vh; overflow: auto; margin-top: 6px; }
+.cmd { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.cmd .lb { flex: 1; } .cmd small { color: var(--muted); font-size: 11px; } .cmd .kb { font-size: 11px; color: var(--muted); min-width: 70px; text-align: right; }
+.cmd.sel, .cmd:hover { background: var(--accent-weak); }
+.cmd-empty { padding: 14px; color: var(--muted); text-align: center; }
+/* Unity のエラー */
+#unityErrDlg textarea { height: 120px; }
+#ueList { margin-top: 10px; max-height: 40vh; overflow: auto; }
+.ue { padding: 8px 10px; border: 1px solid var(--border); border-left: 4px solid var(--err); border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+.ue.warning { border-left-color: var(--warn); }
+.ue code { font-size: 12px; color: var(--muted); }
+.ue-msg { margin: 4px 0; } .ue-help { color: var(--fg); background: var(--accent-weak); padding: 6px 8px; border-radius: 6px; margin: 4px 0; }
+.ue button { margin-top: 4px; font-size: 12px; padding: 4px 10px; }
+.tabs button { padding: 7px 4px; }

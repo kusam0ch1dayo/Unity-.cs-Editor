@@ -1,7 +1,17 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.10.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.10.0': [
+    ['Unity のエラーを貼り付けると、原因の説明と、その行のブロックへの移動 (初心者メニュー)', 'Paste a Unity error to get an explanation and jump to its block (Beginner menu)'],
+    ['インスペクターのプレビュー: フィールドが Unity でどう見えるかを下のパネルに表示', 'Inspector preview: see how your fields look in Unity (bottom panel)'],
+    ['目次: クラス・変数・メソッドの一覧。選ぶと使っている場所が光ります', 'Outline of classes, variables and methods; selecting one highlights its usages'],
+    ['コマンドパレット (Ctrl+Shift+P / F1) と、次のエラーへ (F8)', 'Command palette (Ctrl+Shift+P / F1) and next error (F8)'],
+    ['ツールボックスの先頭に「最近使った」ブロック', '"Recent" blocks at the top of the toolbox'],
+    ['ブロックを画像 (PNG / SVG) で保存 (右クリックで 1 つだけも)', 'Save blocks as PNG / SVG (or a single block from the right-click menu)'],
+    ['コードの書き方 ({ の位置・字下げ) と、名前の付け方のチェック', 'Code style (brace position, indent) and naming checks'],
+    ['設定・マイブロック・拡張パックの書き出し / 読み込み', 'Export / import settings, My blocks and block packs'],
+  ],
   '1.9.0': [
     ['ブロックとツールボックスの色を鮮やかに', 'More vivid block and toolbox colors'],
     ['ツールボックスのカテゴリを、それぞれの色でうっすら色付け', 'Toolbox categories are tinted with their own color'],

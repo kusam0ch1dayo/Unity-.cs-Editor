@@ -20,6 +20,8 @@ const ACTIONS = [
   { id: 'sample', menu: 'edit', icon: '🧪', label: ['サンプルを読み込む', 'Load sample'], run: () => press('sample') },
   { id: 'clear', menu: 'edit', icon: '🗑', label: ['全消去', 'Clear all'], run: () => press('clear') },
   { id: 'editCs', menu: 'edit', icon: '✏️', label: ['C# を直接編集', 'Edit C# directly'], run: () => setEditMode(!editor.on), checked: () => editor.on },
+  { id: 'commands', menu: 'edit', icon: '⌘', label: ['コマンドパレット', 'Command palette'], key: 'Ctrl+Shift+P', run: () => openCommands() },
+  { id: 'nextError', menu: 'edit', icon: '⏭', label: ['次のエラー・警告へ', 'Next error / warning'], key: 'F8', run: () => gotoIssue(1) },
   { id: 'collapseAll', menu: 'edit', icon: '⊟', label: ['メソッドをすべて折りたたむ', 'Collapse all methods'], run: () => collapseAll(true) },
   { id: 'expandAll', menu: 'edit', icon: '⊞', label: ['すべて開く', 'Expand all'], run: () => collapseAll(false) },
   { id: 'tidy', menu: 'edit', icon: '▤', label: ['ブロックを整列', 'Tidy up blocks'], run: () => tidyUp() },
@@ -36,6 +38,8 @@ const ACTIONS = [
   { id: 'assetsSaveAll', menu: 'file', icon: '🎮', label: ['全タブを Assets に保存', 'Save all tabs to Assets'], run: () => saveAllToAssets() },
   { id: 'assetsFolder', menu: 'file', icon: '📂', label: ['Assets の保存先を選ぶ', 'Choose the Assets folder'], run: () => chooseAssetsFolder() },
   { id: 'zip', menu: 'file', icon: '🗜', label: ['全部を zip で保存', 'Save all as zip'], run: () => press('zip') },
+  { id: 'exportPng', menu: 'file', icon: '🖼', label: ['ブロックを画像で保存 (PNG)', 'Save blocks as image (PNG)'], run: () => exportImage('png') },
+  { id: 'exportSvg', menu: 'file', icon: '🖼', label: ['ブロックを画像で保存 (SVG)', 'Save blocks as image (SVG)'], run: () => exportImage('svg') },
   { id: 'openProject', menu: 'file', icon: '📂', label: ['プロジェクトを開く (.json)', 'Open project (.json)'], run: () => openProjectFile() },
   { id: 'saveProject', menu: 'file', icon: '🗂', label: ['プロジェクトを保存 (.json)', 'Save project (.json)'], run: () => saveProjectFile() },
   { id: 'share', menu: 'file', icon: '🔗', label: ['共有リンクをコピー', 'Copy share link'], run: () => shareLink() },
@@ -43,6 +47,9 @@ const ACTIONS = [
   // 初心者
   { id: 'learn', menu: 'beginner', icon: '📚', label: ['チュートリアル (学ぶ)', 'Tutorials (Learn)'], run: () => openLearn() },
   { id: 'beginnerMode', menu: 'beginner', icon: '🔰', label: ['かんたんモード', 'Beginner mode'], run: () => press('beginner'), checked: () => beginner },
+  { id: 'unityErrors', menu: 'beginner', icon: '🎮', label: ['Unity のエラーから探す', 'Find from a Unity error'], run: () => openUnityErrors() },
+  { id: 'inspector', menu: 'beginner', icon: '🔍', label: ['インスペクターのプレビュー', 'Inspector preview'], run: () => showPanel('inspector') },
+  { id: 'outline', menu: 'beginner', icon: '☰', label: ['目次 (変数・メソッドの一覧)', 'Outline (variables and methods)'], run: () => showPanel('outline') },
   { id: 'help', menu: 'beginner', icon: '❓', label: ['選んだブロックの説明', 'Help for the selected block'], run: () => showPanel('help') },
   { id: 'hints', menu: 'beginner', icon: '💡', label: ['ヒントを見る', 'Show hints'], run: () => showPanel('hints') },
   { id: 'welcome', menu: 'beginner', icon: '👋', label: ['はじめての案内', 'Welcome guide'], run: () => openWelcome() },
@@ -50,6 +57,8 @@ const ACTIONS = [
   { id: 'theme', menu: 'settings', icon: '🌓', label: ['テーマを切り替え', 'Switch theme'], run: () => press('theme'), state: () => THEME_LABEL[themeMode] },
   { id: 'lang', menu: 'settings', icon: '🌐', label: ['日本語 / English', '日本語 / English'], run: () => setLang(window.LANG === 'en' ? 'ja' : 'en') },
   { id: 'memo', menu: 'settings', icon: '📝', label: ['メモを C# のコメントに出力', 'Write memos as C# comments'], run: () => setMemo(!cs.exportMemo), checked: () => !!cs.exportMemo },
+  { id: 'exportSettings', menu: 'settings', icon: '📦', label: ['設定を書き出す', 'Export settings'], run: () => exportSettings() },
+  { id: 'importSettings', menu: 'settings', icon: '📦', label: ['設定を読み込む', 'Import settings'], run: () => importSettings() },
   { id: 'whatsNew', menu: 'settings', icon: '✨', label: ['新しくなった点', "What's new"], run: () => openWhatsNew() },
   { id: 'install', menu: 'settings', icon: '📲', label: ['アプリとしてインストール', 'Install as an app'], run: () => installApp() },
   { id: 'settings', menu: 'settings', icon: '⚙', label: ['設定を開く', 'Open settings'], run: () => openSettings() },
@@ -149,7 +158,9 @@ function renderSettings() {
     + `<label class="set-row"><span>🔰 ${pick(['かんたんモード (よく使うブロックだけ表示)', 'Beginner mode (show only common blocks)'])}</span><input type="checkbox" data-set="beginner" ${beginner ? 'checked' : ''}></label>`
     + `<label class="set-row"><span>📝 ${pick(['メモを C# のコメントに出力', 'Write memos as C# comments'])}</span><input type="checkbox" data-set="memo" ${cs.exportMemo ? 'checked' : ''}></label>`
     + (typeof unityVerSettings === 'function' ? unityVerSettings() : '') + '</section>'
+    + (typeof codeStyleSettings === 'function' ? codeStyleSettings() : '')
     + (typeof assetsSettings === 'function' ? assetsSettings() : '')
+    + (typeof transferSettings === 'function' ? transferSettings() : '')
     + `<section><h3>${pick(['このアプリについて', 'About'])}</h3>`
     + `<div class="set-row"><span>${pick(['バージョン', 'Version'])}</span><b>v${APP_VERSION}</b></div>`
     + `<div class="set-row"><span>${pick(['開き方', 'Running as'])}</span><span>${matchMedia('(display-mode: standalone)').matches ? pick(['インストールしたアプリ', 'Installed app'])
@@ -175,6 +186,7 @@ document.getElementById('settingsBody').onchange = async e => {
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   const t = e.target, set = t.dataset.set, sc = t.dataset.sc;
   if (typeof handleThemeSettings === 'function' && handleThemeSettings(e)) return;
+  if (typeof handleCodeStyleSettings === 'function' && handleCodeStyleSettings(e)) return;
   if (set === 'lang') return setLang(t.value);
   if (set === 'beginner' && t.checked !== beginner) press('beginner');
   if (set === 'memo') setMemo(t.checked);
@@ -187,6 +199,7 @@ document.getElementById('settingsBody').onclick = async e => {
   const st = e.target.closest('[data-stab]');
   if (st) { settingsTab = st.dataset.stab; renderSettings(); return; }
   if (typeof handleThemeSettings === 'function' && handleThemeSettings(e)) return;
+  if (typeof handleCodeStyleSettings === 'function' && handleCodeStyleSettings(e)) return;
   if (typeof handlePackSettings === 'function' && await handlePackSettings(e)) return;
   if (typeof handleSnippetSettings === 'function' && handleSnippetSettings(e)) return;
   if (typeof handleAssetsSettings === 'function' && await handleAssetsSettings(e)) return;

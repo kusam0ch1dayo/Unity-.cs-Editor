@@ -43,6 +43,7 @@ function update() {
   if (typeof refreshShortcuts === 'function') refreshShortcuts();
   highlightBlock(selectedId);
   if (typeof saveProject === 'function') saveProject();
+  if (typeof refreshSidePanels === 'function') refreshSidePanels();
 }
 document.getElementById('issues').onclick = e => {
   const fx = e.target.closest('.fix');
@@ -78,12 +79,15 @@ ws.addChangeListener(e => {
 document.getElementById('code').onclick = e => {
   const ln = e.target.closest('.ln');
   if (!ln) return;
-  const line = +ln.dataset.l;
-  let best = null, size = Infinity;
-  blockRanges.forEach(([s, en], id) => { if (s <= line && line <= en && en - s < size) { size = en - s; best = id; } });
-  const b = best && ws.getBlockById(best);
+  const b = blockAtLine(+ln.dataset.l);
   if (b) { ws.centerOnBlock(b.id); Blockly.common.setSelected(b); }
 };
+// C# の行に対応するいちばん小さいブロック
+function blockAtLine(line) {
+  let best = null, size = Infinity;
+  blockRanges.forEach(([s, en], id) => { if (s <= line && line <= en && en - s < size) { size = en - s; best = id; } });
+  return best && ws.getBlockById(best);
+}
 // ブロックのメモを C# のコメントとして出力するか
 const MEMO_KEY = 'unity-block-coder-memo';
 try { cs.exportMemo = localStorage.getItem(MEMO_KEY) === '1'; } catch (e) {}
@@ -236,12 +240,13 @@ document.getElementById('reqSave').onclick = () => {
 renderCollected();
 
 // 問題 / 読み込みログ タブ
-const PANELS = { issues: 'tabIssues', help: 'tabHelp', hints: 'tabHints', importLog: 'tabLog' };
+const PANELS = { issues: 'tabIssues', help: 'tabHelp', hints: 'tabHints', inspector: 'tabInspector', outline: 'tabOutline', importLog: 'tabLog' };
 function showPanel(name) {
   for (const [panel, tab] of Object.entries(PANELS)) {
     document.getElementById(panel).hidden = panel !== name;
     document.getElementById(tab).classList.toggle('on', panel === name);
   }
+  if (typeof refreshSidePanels === 'function') refreshSidePanels();
 }
 const showTab = log => showPanel(log ? 'importLog' : 'issues');
 Object.entries(PANELS).forEach(([panel, tab]) => document.getElementById(tab).onclick = () => showPanel(panel));

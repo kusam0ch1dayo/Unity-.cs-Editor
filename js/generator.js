@@ -49,7 +49,9 @@ cs.scrubNakedValue = line => `// ${tr('未接続の式')}: ${line}\n`;
 const f = (b, n) => b.getFieldValue(n);
 const v = (b, n, o, d = '') => cs.valueToCode(b, n, o) || d;
 const st = (b, n) => cs.statementToCode(b, n);
-const block = (head, b, n) => `${head}\n{\n${st(b, n)}}\n`;
+// { の位置 (設定の「コードの書き方」)。次の行 (Unity の標準) / 同じ行
+const brace = () => cs.braceSameLine ? ' {' : '\n{';
+const block = (head, b, n) => `${head}${brace()}\n${st(b, n)}}\n`;
 const lit = t => '"' + t.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
 // メソッドの前に空行を入れる。属性やコメントは、それが付くメンバーと一緒に扱う
 const DECOR = ['attr', 'comment_member'], METHODISH = ['method_def', 'unity_event', 'coroutine_def', 'constructor_def'];
@@ -113,7 +115,7 @@ const caseBody = b => {
   while (last && last.getNextBlock()) last = last.getNextBlock();
   return st(b, 'DO') + (last && ['controls_flow_statements', 'return_stmt'].includes(last.type) ? '' : cs.INDENT + 'break;\n');
 };
-G.enum_def = b => `public enum ${f(b, 'NAME')}\n{\n${f(b, 'VALUES').split(',').map(s => s.trim()).filter(Boolean).map(s => cs.INDENT + s).join(',\n')}\n}\n`;
+G.enum_def = b => `public enum ${f(b, 'NAME')}${brace()}\n${f(b, 'VALUES').split(',').map(s => s.trim()).filter(Boolean).map(s => cs.INDENT + s).join(',\n')}\n}\n`;
 G.property_def = b => `${mod(f(b, 'ACCESS'))}${f(b, 'TYPE')} ${f(b, 'NAME')} { ${f(b, 'ACC')} }\n`;
 G.constructor_def = b => gap(b) + block(`public ${ownerClass(b)}(${f(b, 'PARAMS')})`, b, 'BODY');
 G.coroutine_def = b => gap(b) + block(`IEnumerator ${f(b, 'NAME')}(${f(b, 'PARAMS')})`, b, 'BODY');
@@ -187,7 +189,7 @@ G.tuple_assign = b => `(${f(b, 'NAME1')}, ${f(b, 'NAME2')}) = ${v(b, 'VALUE', O.
 G.switch_expr = b => {
   const arms = [];
   for (let c = b.getInputTargetBlock('ARMS'); c; c = c.getNextBlock()) if (c.type === 'switch_arm') arms.push(`${cs.INDENT}${f(c, 'PATTERN')} => ${v(c, 'VALUE', O.NONE, 'default')},`);
-  return [`${v(b, 'VALUE', O.MEMBER, 'x')} switch\n{\n${arms.join('\n')}\n}`, O.COND];
+  return [`${v(b, 'VALUE', O.MEMBER, 'x')} switch${brace()}\n${arms.join('\n')}\n}`, O.COND];
 };
 G.switch_arm = () => '';
 G.array_new = b => [`new ${f(b, 'TYPE')}[${v(b, 'SIZE', O.NONE, '0')}]`, O.MEMBER];
@@ -198,8 +200,10 @@ G.comment_member = b => gap(b) + comment(f(b, 'TEXT')) + '\n';
 G.attr = b => gap(b) + `[${f(b, 'CODE')}]\n`;
 G.class_attr = b => `[${f(b, 'CODE')}]\n`;
 G.for_step = b => { const i = f(b, 'VAR'); return block(`for (int ${i} = ${v(b, 'FROM', O.ASSIGN, '0')}; ${i} ${f(b, 'CMP')} ${v(b, 'TO', O.REL, '0')}; ${i}${f(b, 'STEP')})`, b, 'DO'); };
-G.do_while = b => `do\n{\n${st(b, 'DO')}} while (${v(b, 'COND', O.NONE, 'false')});\n`;
-G.try_catch = b => block('try', b, 'TRY') + block(`catch (${f(b, 'TYPE')} ${f(b, 'VAR')})`, b, 'CATCH');
+G.do_while = b => `do${brace()}\n${st(b, 'DO')}} while (${v(b, 'COND', O.NONE, 'false')});\n`;
+// { を同じ行に書くときは、続く else / catch も } の後ろにつなげる (} else {)
+const joinBlocks = (a, b) => cs.braceSameLine && a ? a.replace(/\n$/, ' ') + b : a + b;
+G.try_catch = b => joinBlocks(block('try', b, 'TRY'), block(`catch (${f(b, 'TYPE')} ${f(b, 'VAR')})`, b, 'CATCH'));
 G.interp_string = b => [`$"${f(b, 'TEXT')}"`, O.ATOMIC];
 G.to_string_fmt = b => [`${v(b, 'VALUE', O.MEMBER, '0')}.ToString(${lit(f(b, 'FMT'))})`, O.MEMBER];
 G.string_check = b => [`string.${f(b, 'FN')}(${v(b, 'VALUE', O.NONE, '""')})`, O.MEMBER];
@@ -210,7 +214,7 @@ G.as_expr = b => [`${v(b, 'VALUE', O.REL, 'null')} as ${f(b, 'TYPE')}`, O.REL];
 G.is_type = b => [`${v(b, 'VALUE', O.REL, 'null')} is ${f(b, 'TYPE')}`, O.REL];
 G.null_coalesce = b => [`${v(b, 'A', O.OR, 'null')} ?? ${v(b, 'B', O.COND, 'null')}`, O.COND];
 G.lambda_expr = b => [`(${f(b, 'PARAMS')}) => ${v(b, 'VALUE', O.NONE, 'null')}`, O.ASSIGN];
-G.lambda_block = b => [`(${f(b, 'PARAMS')}) =>\n{\n${st(b, 'BODY')}}`, O.ASSIGN];
+G.lambda_block = b => [`(${f(b, 'PARAMS')}) =>${brace()}\n${st(b, 'BODY')}}`, O.ASSIGN];
 G.button_listener_lambda = b => `${v(b, 'OBJ', O.MEMBER, 'button')}.onClick.AddListener(${v(b, 'FN', O.NONE, '() => { }')});\n`;
 G.array_init = b => [`new ${f(b, 'TYPE')}[] { ${f(b, 'ITEMS')} }`, O.MEMBER];
 G.vector2_new = b => [`new Vector2(${v(b, 'X', O.NONE, '0')}, ${v(b, 'Y', O.NONE, '0')})`, O.MEMBER];
@@ -249,10 +253,10 @@ G.draw_line = b => { const c = v(b, 'COLOR', O.NONE); return `Debug.DrawLine(${v
 G.controls_if = b => {
   let code = '', n = 0;
   while (b.getInput('IF' + n)) {
-    code += block(`${n ? 'else if' : 'if'} (${v(b, 'IF' + n, O.NONE, 'false')})`, b, 'DO' + n);
+    code = joinBlocks(code, block(`${n ? 'else if' : 'if'} (${v(b, 'IF' + n, O.NONE, 'false')})`, b, 'DO' + n));
     n++;
   }
-  if (b.getInput('ELSE')) code += block('else', b, 'ELSE');
+  if (b.getInput('ELSE')) code = joinBlocks(code, block('else', b, 'ELSE'));
   return code;
 };
 G.logic_compare = b => {

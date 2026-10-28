@@ -7,7 +7,7 @@ const I18N = {
   'サンプル読込': 'Load sample', '全消去': 'Clear all', '表示テーマ (自動 / ライト / ダーク)': 'Theme (auto / light / dark)', 'メモ出力': 'Export memos',
   'ブロックに付けたメモ (右クリック →「コメントを追加」) を // コメントとして出力': 'Write block memos (right-click → "Add Comment") as // comments',
   'コピー': 'Copy', '.cs 保存': 'Save .cs', '全部 zip': 'All as zip', '全タブのスクリプトを zip で保存': 'Save the scripts of all tabs as a zip', '問題': 'Problems',
-  '読み込みログ': 'Import log', 'C# を読み込むと、ブロック化できなかった箇所と足りないブロックがここに表示されます': 'After importing C#, code that could not become blocks and the missing blocks are listed here',
+  '読み込みログ': 'Import log', 'インスペクター': 'Inspector', '目次': 'Outline', 'C# を読み込むと、ブロック化できなかった箇所と足りないブロックがここに表示されます': 'After importing C#, code that could not become blocks and the missing blocks are listed here',
   'C# を読み込んでブロックに変換': 'Import C# and convert it to blocks', 'ここに C# コードを貼り付けるか、ファイルを選んでください': 'Paste C# code here or choose files',
   '新しいタブで開く': 'Open in a new tab', '今のブロックに追加する': 'Add to the current blocks', 'キャンセル': 'Cancel', 'ブロックに変換': 'Convert to blocks',
   'ブロック追加の依頼文': 'Block request', 'この文章をコピーして Claude のセッションに貼り付けると、足りないブロックをまとめて追加できます。': 'Copy this text and paste it into a Claude session to have the missing blocks added.',

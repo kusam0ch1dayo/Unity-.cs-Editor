@@ -36,11 +36,10 @@ function findDecl(block) {
   const found = ws.getAllBlocks(false).filter(d => DECL[d.type] && f(d, DECL[d.type]).trim() === name && declScope(d).includes(block));
   return found.sort((a, b) => declScope(a).length - declScope(b).length)[0] || null;
 }
-function renameSymbol(decl) {
+// 宣言 decl の名前を name に変え、使っている場所もすべて変える。変えた参照の数を返す
+function applyRename(decl, name) {
   const field = DECL[decl.type], old = f(decl, field).trim();
-  Blockly.dialog.prompt(tr('新しい名前 (「{0}」を使っている場所もすべて変わります)', old), old, name => {
-    if (!name || (name = name.trim()) === old) return;
-    if (!/^[A-Za-z_]\w*$/.test(name)) { Blockly.dialog.alert(tr('名前「{0}」は使えません', name)); return; }
+  {
     const isType = ['class_def', 'enum_def'].includes(decl.type), word = new RegExp(`\\b${old}\\b`, 'g');
     // 文字列 ("...") の中は変えない
     const inCode = s => s.split(/("(?:\\.|[^"\\])*")/).map((part, i) => i % 2 ? part : part.replace(word, name)).join('');
@@ -61,6 +60,17 @@ function renameSymbol(decl) {
         (REF_TEXT[b.type] || []).forEach(fl => set(fl, b.type === 'interp_string' ? s => s.replace(/\{[^}]*\}/g, inCode) : inCode));
       }
     } finally { Blockly.Events.setGroup(false); }
+    return count;
+  }
+}
+// 宣言 decl を参照しているブロック (宣言そのものは含まない)
+const usagesOf = decl => declScope(decl).filter(b => b !== decl && (REF_PATH[b.type] || []).length && findDecl(b) === decl);
+function renameSymbol(decl) {
+  const old = f(decl, DECL[decl.type]).trim();
+  Blockly.dialog.prompt(tr('新しい名前 (「{0}」を使っている場所もすべて変わります)', old), old, name => {
+    if (!name || (name = name.trim()) === old) return;
+    if (!/^[A-Za-z_]\w*$/.test(name)) { Blockly.dialog.alert(tr('名前「{0}」は使えません', name)); return; }
+    const count = applyRename(decl, name);
     showToast(tr('「{0}」→「{1}」に変更しました (参照 {2} か所)', old, name, count) + '\n' + tr('(取り消しで元に戻せます)'));
   });
 }

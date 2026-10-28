@@ -171,7 +171,8 @@ function refreshToolbox() {
   const base = beginner ? toolbox.contents.map(c => ({ ...c, contents: c.contents.filter(it => BASIC.has(it.type)) })).filter(c => c.contents.length) : toolbox.contents;
   const extra = typeof snippetCategory === 'function' ? snippetCategory() : null;
   const adapted = typeof adaptToolboxJson === 'function' ? adaptToolboxJson(base) : base;
-  activeToolbox = { kind: 'categoryToolbox', contents: extra ? [...adapted, extra] : adapted };
+  const recent = typeof recentCategory === 'function' ? recentCategory() : null;
+  activeToolbox = { kind: 'categoryToolbox', contents: [...(recent ? [recent] : []), ...adapted, ...(extra ? [extra] : [])] };
   ws.updateToolbox(activeToolbox);
   // カテゴリの行を、そのカテゴリの色でうっすら色付けする (CSS の --cat で使う)
   document.querySelectorAll('.blocklyToolboxDiv .blocklyTreeRow').forEach(r => r.style.setProperty('--cat', r.style.borderLeftColor));

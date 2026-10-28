@@ -128,8 +128,7 @@ async function featureTests(browser, base) {
   const packFile = path.join(tmp, 'mypack.json'), badFile = path.join(tmp, 'bad.json');
   fs.writeFileSync(packFile, JSON.stringify({ id: 'my-pack', name: 'テスト', blocks: [{ type: 'my_log_warn', label: 'warn {MSG}', code: 'Debug.LogWarning({MSG});', inputs: { MSG: { type: 'string', example: { text: 'hi' } } } }] }));
   fs.writeFileSync(badFile, JSON.stringify({ id: 'bad pack', blocks: [] }));
-  await p.click('#settingsBtn');
-  await p.click('#settingsBody [data-stab="ext"]');
+  await p.evaluate(() => { openSettings(); settingsTab = 'ext'; renderSettings(); });
   await p.setInputFiles('#settingsBody [data-pack-file]', packFile); await p.waitForTimeout(300);
   check('拡張パックを読み込める', await p.evaluate(() => !!PACK_BLOCKS.my_log_warn && toolbox.contents.some(c => c.pack === 'my-pack')));
   await p.setInputFiles('#settingsBody [data-pack-file]', badFile); await p.waitForTimeout(300);
@@ -368,6 +367,75 @@ async function qolTests(browser, base) {
   await p2.context().close();
 }
 
+async function toolTests(browser, base) {
+  console.log('\n[ja] インスペクター・目次・F8・コマンドパレット・Unity のエラー・最近使った・画像・書き方・名前・設定の引っ越し');
+  const p = await open(browser, base, 'ja', {}, { acceptDownloads: true });
+  const ev = (fn, arg) => p.evaluate(fn, arg);
+  const SRC = 'using System.Collections.Generic;\nusing UnityEngine;\n\npublic enum State\n{\n    Idle,\n    Run\n}\n\npublic class Player : MonoBehaviour\n{\n    [Header("Move")]\n    [Range(0, 20)]\n    public float moveSpeed = 5;\n    [SerializeField] private bool canJump = true;\n    public Vector3 offset = new Vector3(0, 2, -5);\n    public Transform target;\n    public State state;\n    public List<int> scores;\n    private int secret;\n    public static int count;\n    public Dictionary<string, int> table;\n\n    void Update()\n    {\n        moveSpeed += 1;\n    }\n}\n';
+  await ev(s => { importCs(s, false); update(); showPanel('inspector'); }, SRC);
+  await p.waitForTimeout(200);
+  const ins = await ev(() => [...document.querySelectorAll('#inspector .ins-row .ins-label')].map(x => x.textContent.replace(/ⓘ/, '').trim()));
+  check('インスペクター: public と [SerializeField] だけを Unity の見出しで表示する', JSON.stringify(ins) === JSON.stringify(['Script', 'Move Speed', 'Can Jump', 'Offset', 'Target', 'State', 'Scores', 'Table']), JSON.stringify(ins));
+  check('インスペクター: [Header] [Range] と初期値を反映する', await ev(() => document.querySelector('#inspector .ins-header').textContent === 'Move' && !!document.querySelector('#inspector .ins-slider') && document.querySelector('#inspector .ins-vec').textContent.includes('-5')));
+  await p.click('#inspector .ins-row[data-id] >> nth=1');
+  check('インスペクター: クリックでフィールドのブロックへ移動', await ev(() => Blockly.common.getSelected()?.type === 'field_def'));
+
+  await ev(() => showPanel('outline')); await p.waitForTimeout(200);
+  check('目次: クラス・enum・メンバーと使っている数を表示する', await ev(() => document.querySelectorAll('#outline .ol-class').length === 2 && [...document.querySelectorAll('#outline .ol-row')].some(r => /moveSpeed/.test(r.textContent) && r.querySelector('.ol-uses')?.textContent === '1')));
+  await p.click('#outline .ol-row:has-text("moveSpeed")'); await p.waitForTimeout(150);   // 選択のイベントは少し遅れて届く
+  check('目次: クリックで移動し、使っている場所を光らせる', await ev(() => Blockly.common.getSelected()?.type === 'field_def' && document.querySelectorAll('.ubc-usage').length === 1));
+
+  await ev(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    void Start()\n    {\n        Debug.Log(spead);\n    }\n}\n', false); update(); });
+  await p.keyboard.press('F8');
+  check('F8 でエラーのあるブロックへ移動する', await ev(() => Blockly.common.getSelected()?.type === 'var_get'));
+
+  await p.keyboard.press('Control+Shift+P'); await p.keyboard.type('zip');
+  check('コマンドパレットで操作を探せる', await ev(() => cmdDlg.open && cmdItems.some(i => i.label.includes('zip'))));
+  await p.keyboard.press('Escape');
+
+  await ev(() => document.getElementById('sample').click()); await p.waitForTimeout(200);
+  await ev(() => { openUnityErrors(); document.getElementById('ueText').value = "Assets/Scripts/PlayerController.cs(26,13): error CS0103: The name 'h' does not exist in the current context\nNullReferenceException: Object reference not set to an instance of an object\nPlayerController.Update () (at Assets/Scripts/PlayerController.cs:27)"; document.querySelector('[data-ue=parse]').click(); });
+  check('Unity のエラー (コンパイル・実行時) を読み取って説明する', await ev(() => parsedErrors.map(x => x.code + '@' + x.line).join(',') === 'CS0103@26,NullReferenceException@27' && document.querySelectorAll('#ueList .ue-help').length === 2));
+  await ev(() => document.querySelector('[data-ue=go]').click());
+  check('Unity のエラーの行のブロックへ移動する', await ev(() => Blockly.common.getSelected()?.type === 'var_local' && code.split('\n')[25].includes('float h')));
+
+  await ev(() => { recentTypes = ['debug_log', 'if_else_missing_type']; refreshToolbox(); });
+  check('最近使ったブロックのカテゴリが先頭に出る', await ev(() => activeToolbox.contents[0].name === '🕘 最近使った' && activeToolbox.contents[0].contents.length === 1));
+
+  const dl = p.waitForEvent('download'); await ev(() => exportImage('svg')); const svgPath = await (await dl).path();
+  const svg = fs.readFileSync(svgPath, 'utf8');
+  check('ブロックを画像 (SVG) で保存できる', svg.startsWith('<svg') && svg.includes('blocklyText') && svg.includes('PlayerController'));
+  const dl2 = p.waitForEvent('download'); await ev(() => { Blockly.common.setSelected(ws.getAllBlocks(false).find(b => b.type === 'debug_log')); exportImage('png', true); });
+  check('選んだブロックを PNG で保存できる', (await dl2).suggestedFilename() === 'debug_log.png');
+
+  await ev(() => { setCodeStyle('brace', 'same'); setCodeStyle('indent', '2'); });
+  check('{ を同じ行・字下げ 2 にできる (} else { もつなげる)', await ev(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    void Start()\n    {\n        if (true) { Debug.Log(1); } else { Debug.Log(2); }\n    }\n}\n', false); update(); return code.includes('public class A : MonoBehaviour {\n  void Start() {\n    if (true) {\n      Debug.Log(1);\n    } else {'); }));
+  check('書き方を変えた C# も読み込み直して同じになる', await ev(() => { const c = code; importCs(c, false); update(); return c === code; }));
+  await ev(() => { setCodeStyle('brace', 'next'); setCodeStyle('indent', '4'); });
+
+  await ev(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    public float Speed = 1;\n    public static A Instance;\n    void jump()\n    {\n        Speed += 1;\n    }\n}\n', false); update(); });
+  check('名前の付け方を警告する (static は対象外)', await ev(() => { const m = issues.filter(i => /始めるのが一般的/.test(i.msg)).map(i => i.msg).join('|'); return /'Speed'/.test(m) && /'jump'/.test(m) && !/Instance/.test(m); }));
+  await ev(() => issues.find(i => /'Speed'/.test(i.msg)).fixes[0].run());
+  check('名前を直すと、使っている場所も変わる', await ev(() => { update(); return code.includes('public float speed') && code.includes('speed += 1'); }));
+  await ev(() => setCodeStyle('naming', false));
+  check('名前のチェックは設定で止められる', await ev(() => !issues.some(i => /始めるのが一般的/.test(i.msg))));
+  await ev(() => setCodeStyle('naming', true));
+
+  const dl3 = p.waitForEvent('download'); await ev(() => exportSettings()); const setPath = path.join(tmp, 'settings.json'); await (await dl3).saveAs(setPath);
+  const exported = JSON.parse(fs.readFileSync(setPath, 'utf8'));
+  check('設定を書き出せる', exported.format === 'unity-block-coder-settings' && 'unity-block-coder-style' in exported.data && !('unity-block-coder-project' in exported.data));
+  check('テスト中にエラーがない (道具)', !p.errors.length, p.errors.join(' / '));
+  await p.context().close();
+
+  const p2 = await open(browser, base, 'ja');
+  exported.data['unity-block-coder-style'] = JSON.stringify({ brace: 'same', indent: 'tab', naming: true });
+  fs.writeFileSync(setPath, JSON.stringify(exported));
+  const chooser = p2.waitForEvent('filechooser'); p2.evaluate(() => importSettings()); await (await chooser).setFiles(setPath);
+  await p2.waitForEvent('load'); await p2.waitForFunction(() => typeof tsParser !== 'undefined' && tsParser);
+  check('設定を読み込める (読み込み後に反映される)', await p2.evaluate(() => codeStyle.brace === 'same' && cs.INDENT === '\t'));
+  await p2.context().close();
+}
+
 (async () => {
   const server = await serve(), base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
@@ -375,6 +443,7 @@ async function qolTests(browser, base) {
     for (const lang of ['ja', 'en']) await langTests(browser, base, lang);
     await featureTests(browser, base);
     await qolTests(browser, base);
+    await toolTests(browser, base);
   } catch (e) { failed++; console.log('  ✖ ' + e.stack); if (process.env.GITHUB_ACTIONS) console.log(`::error title=テストが止まりました::${String(e.stack).replace(/\n/g, ' ').slice(0, 900)}`); }
   await browser.close(); server.close();
   fs.rmSync(tmp, { recursive: true, force: true });
