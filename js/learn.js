@@ -189,76 +189,6 @@ document.getElementById('beginner').onclick = () => {
 
 // ---------- チュートリアル ----------
 const LEARNED_KEY = 'unity-block-coder-learned';
-const src = (name, body) => `using UnityEngine;\n\npublic class ${name} : MonoBehaviour\n{\n${body}}\n`;
-const inEvent = (code, ev) => (code.match(new RegExp(`void ${ev}\\([^)]*\\)\\n\\s*\\{([\\s\\S]*?)\\n    \\}`)) || [, ''])[1];
-const TUTORIALS = [
-  { id: 'hello', title: ['1. はじめての Hello World', '1. Your first Hello World'], desc: ['Console に文字を表示する', 'Print text to the Console'],
-    start: src('Hello', '    void Start()\n    {\n    }\n'), steps: [
-      { text: ['Unity のスクリプトは「クラス」の中に書きます。新しいタブにクラス Hello と「Unity イベント Start()」を用意しました。Start はゲームが始まったときに 1 回だけ動きます。右側に、ブロックから作られた C# が表示されています。',
-        'Unity scripts are written inside a "class". A new tab has a class Hello with a Unity event Start(). Start runs once when the game starts. The C# made from the blocks is shown on the right.'] },
-      { text: ['左の「Unity」カテゴリを開き、「Debug.Log」ブロックを「Start()」の中にドラッグして入れましょう。', 'Open the "Unity" category and drag the "Debug.Log" block into "Start()".'],
-        cat: 'Unity', hint: ['ブロックの左上の出っ張りを、Start() の中のくぼみに合わせると「カチッ」とはまります。', 'Line up the notch of the block with the slot inside Start() and it snaps in.'],
-        check: c => /Debug\.Log\(/.test(inEvent(c, 'Start')) },
-      { text: ['Debug.Log の中の「Hello」をクリックして、好きな言葉に変えてみましょう。', 'Click "Hello" inside Debug.Log and change it to any words you like.'],
-        check: c => /Debug\.Log\("(?!Hello")[^"]*"\)/.test(inEvent(c, 'Start')) },
-      { text: ['完成です！「.cs 保存」で保存し、Unity の Assets フォルダに入れます。シーンの GameObject にドラッグして付け、▶ (再生) を押すと Console に表示されます。',
-        'Done! Save with "Save .cs" and put it in the Assets folder of Unity. Drag it onto a GameObject in the scene and press ▶ (Play) to see it in the Console.'] },
-    ] },
-  { id: 'move', title: ['2. 変数で動かす', '2. Move with a variable'], desc: ['変数 speed を使ってオブジェクトを動かす', 'Move an object using a speed variable'],
-    start: src('Mover', '    void Update()\n    {\n    }\n'), steps: [
-      { text: ['変数は値を入れておく「箱」です。「クラス」カテゴリの「フィールド」ブロックを、クラスの中 (Update の上) に入れましょう。型を float、名前を speed、値を 5 にします。',
-        'A variable is a "box" that holds a value. Put a "Field" block from the "Class" category inside the class (above Update). Set the type to float, the name to speed and the value to 5.'],
-        cat: 'クラス', hint: ['値の穴には「数値・文字」カテゴリの数のブロックをはめます。public にするとインスペクターから値を変えられます。', 'Snap a number block from "Math & Text" into the value slot. public lets you change it in the Inspector.'],
-        check: c => /float speed = 5f?;/.test(c) },
-      { text: ['「Unity」カテゴリの「transform.Translate」ブロックを Update() の中に入れましょう。Update は毎フレーム (1 秒に何十回も) 動きます。',
-        'Put the "transform.Translate" block from the "Unity" category into Update(). Update runs every frame (dozens of times per second).'],
-        cat: 'Unity', check: c => /transform\.Translate\(/.test(inEvent(c, 'Update')) },
-      { text: ['Translate の中を「Vector3.forward × speed × Time.deltaTime」にしましょう。かけ算は「数値・文字」の計算ブロック、speed は「変数」カテゴリの値ブロック、Time.deltaTime は「Unity」カテゴリにあります。',
-        'Make the inside of Translate "Vector3.forward × speed × Time.deltaTime". Multiplication is the arithmetic block in "Math & Text", speed is the value block in "Variables", and Time.deltaTime is in "Unity".'],
-        hint: ['計算ブロックの中に計算ブロックを入れると、3 つ以上をかけ算できます。', 'Put an arithmetic block inside another one to multiply three values.'],
-        check: c => { const t = (inEvent(c, 'Update').match(/transform\.Translate\(([^;]*)\);/) || [, ''])[1]; return /speed/.test(t) && /Time\.deltaTime/.test(t); } },
-      { text: ['Time.deltaTime は「前のフレームからの秒数」です。これを掛けると「1 秒に speed だけ進む」になり、パソコンの速さに関係なく同じ速さで動きます。',
-        'Time.deltaTime is the number of seconds since the last frame. Multiplying by it means "move speed units per second", the same on every computer.'] },
-    ] },
-  { id: 'if', title: ['3. もし〜なら (if)', '3. If statements'], desc: ['キーを押したときだけ動かす', 'Do something only when a key is pressed'],
-    start: src('Jumper', '    void Update()\n    {\n    }\n'), steps: [
-      { text: ['「ロジック」カテゴリの「もし」ブロックを Update() の中に入れましょう。', 'Put the "if" block from the "Logic" category into Update().'], cat: 'ロジック', check: c => /if \(/.test(inEvent(c, 'Update')) },
-      { text: ['「もし」の条件の穴に、「Unity」カテゴリの「Input.GetKeyDown( KeyCode.Space )」をはめましょう。スペースキーを押した瞬間だけ true になります。',
-        'Snap "Input.GetKeyDown( KeyCode.Space )" from the "Unity" category into the condition. It is true only at the moment Space is pressed.'],
-        cat: 'Unity', check: c => /if \(Input\.GetKeyDown\(KeyCode\.\w+\)\)/.test(c) },
-      { text: ['「もし」の中 (実行) に Debug.Log を入れて、「ジャンプ！」と表示させましょう。', 'Put a Debug.Log inside the if (do) and make it print "Jump!".'],
-        check: c => /if \(Input\.GetKeyDown\(KeyCode\.\w+\)\)\n\s*\{\n\s*Debug\.Log\(/.test(c) },
-      { text: ['これで「スペースキーを押したときだけ」表示されます。歯車アイコンから「そうでなければ (else)」も追加できます。', 'Now it prints only when Space is pressed. Use the gear icon to add "else" too.'] },
-    ] },
-  { id: 'loop', title: ['4. 繰り返し (for)', '4. Loops (for)'], desc: ['同じ処理を何度も実行する', 'Run the same thing many times'],
-    start: src('Counter', '    void Start()\n    {\n    }\n'), steps: [
-      { text: ['「ループ」カテゴリの「for int i = 0 ～ 10 未満」ブロックを Start() の中に入れましょう。', 'Put the "for int i = 0 to below 10" block from "Loops" into Start().'], cat: 'ループ', check: c => /for \(int \w+ = /.test(inEvent(c, 'Start')) },
-      { text: ['for の中に Debug.Log を入れ、表示する中身を「変数」カテゴリの値ブロックにして、名前を i にしましょう。', 'Put a Debug.Log inside the for, and use the value block from "Variables" with the name i as its content.'],
-        cat: '変数', hint: ['Debug.Log の「Hello」のブロックを外して、代わりに値ブロックをはめます。', 'Remove the "Hello" block from Debug.Log and snap the value block in instead.'],
-        check: c => /for \(int (\w+)[^)]*\)\n\s*\{[\s\S]*?Debug\.Log\(\1\)/.test(c) },
-      { text: ['実行すると 0, 1, 2 … 9 と表示されます。i は 1 回ごとに 1 ずつ増える変数です。', 'When run, it prints 0, 1, 2 … 9. i is a variable that goes up by 1 each round.'] },
-    ] },
-  { id: 'trigger', title: ['5. 当たり判定', '5. Collisions'], desc: ['プレイヤーが触れたらコインを消す', 'Remove a coin when the player touches it'],
-    start: src('Coin', ''), steps: [
-      { text: ['「Unity」カテゴリの「Unity イベント」をクラスの中に入れ、種類を OnTriggerEnter(Collider other) にしましょう。何かがぶつかった瞬間に動きます。',
-        'Put a "Unity event" from the "Unity" category into the class and set it to OnTriggerEnter(Collider other). It runs when something enters.'],
-        cat: 'Unity', check: c => /void OnTriggerEnter\(Collider other\)/.test(c) },
-      { text: ['その中に「もし」を入れ、条件に「オブジェクト」カテゴリの「other.CompareTag("Player")」をはめましょう。ぶつかった相手のタグが Player かを調べます。',
-        'Put an "if" inside it, with "other.CompareTag("Player")" from "Objects" as the condition. It checks whether the other object is tagged Player.'],
-        cat: 'オブジェクト', check: c => /if \(other\.CompareTag\("Player"\)\)/.test(c) },
-      { text: ['「もし」の中に「オブジェクト」カテゴリの「Destroy( gameObject )」を入れましょう。', 'Put "Destroy( gameObject )" from "Objects" inside the if.'], cat: 'オブジェクト',
-        check: c => /CompareTag\("Player"\)\)\n\s*\{\n\s*Destroy\(gameObject/.test(c) },
-      { text: ['Unity 側では、コインの Collider の「Is Trigger」にチェックを入れ、プレイヤーにタグ「Player」と Rigidbody を付けると動きます。',
-        'In Unity, check "Is Trigger" on the coin collider, and give the player the "Player" tag and a Rigidbody.'] },
-    ] },
-  { id: 'read', title: ['6. C# を読んでみよう', '6. Read the C#'], desc: ['ブロックと C# の対応を確かめる', 'See how blocks and C# match'],
-    start: src('Reader', '    public float speed = 3f;\n\n    void Update()\n    {\n        if (Input.GetKey(KeyCode.RightArrow))\n        {\n            transform.Translate(Vector3.right * speed * Time.deltaTime);\n        }\n    }\n'), steps: [
-      { text: ['右側の C# の行をクリックしてみましょう。その行を作っているブロックが選ばれ、下の「ヘルプ」に説明が出ます。', 'Click a line of the C# on the right. The block that makes it is selected, and "Help" below explains it.'],
-        check: () => !!selectedId },
-      { text: ['今度はブロックをクリックしてみましょう。対応する C# の行が青く光ります。いろいろなブロックで試して、C# の書き方を覚えましょう。', 'Now click a block. The matching C# lines light up. Try several blocks to learn how C# is written.'] },
-      { text: ['C# を自分で書いたら「C# 読込」でブロックに戻せます。ブロックと C# を行き来しながら練習しましょう。', 'When you write C# yourself, "Import C#" turns it back into blocks. Practice by going back and forth.'] },
-    ] },
-];
 let tutor = null;   // { t: チュートリアル, i: 何番目の手順, done: 合格したか }
 const learned = () => { try { return JSON.parse(localStorage.getItem(LEARNED_KEY)) || []; } catch (e) { return []; } };
 async function startTutorial(t) {
@@ -284,6 +214,8 @@ function renderTutor() {
     + `<p>${esc(pick(step.text))}</p>`
     + (step.cat ? `<button data-act="cat">📂 ${pick(['カテゴリを開く', 'Open category'])}: ${esc(tr(step.cat))}</button>` : '')
     + (step.hint ? `<details><summary>${pick(['ヒントを見る', 'Show hint'])}</summary>${esc(pick(step.hint))}</details>` : '')
+    + (t.answer ? `<details class="tutor-answer"><summary>${pick(['答えを見る', 'Show answer'])}</summary><pre>${hl(t.answer)}</pre>`
+      + `<button data-act="answer">${pick(['答えを新しいタブで開く', 'Open the answer in a new tab'])}</button></details>` : '')
     + `<div class="tutor-foot">${step.check ? (tutor.done ? `<span class="pass">✔ ${pick(['できました！', 'Well done!'])}</span>` : `<span class="wait">${pick(['できたら自動でチェックします…', 'Checked automatically when done…'])}</span>`) : '<span></span>'}`
     + `${i ? `<button data-act="prev">← ${pick(['戻る', 'Back'])}</button>` : ''}<button data-act="next" class="primary" ${tutor.done ? '' : 'disabled'}>${last ? pick(['完了 🎉', 'Finish 🎉']) : pick(['次へ →', 'Next →'])}</button></div>`;
 }
@@ -292,6 +224,7 @@ document.getElementById('tutor').onclick = e => {
   if (!act || !tutor) return;
   if (act === 'close') tutor = null;
   if (act === 'cat') return openCategory(tutor.t.steps[tutor.i].cat);
+  if (act === 'answer') { const t = tutor.t, i = project.active; newTab({}); importCs(t.answer, false); ws.clearUndo(); switchTo(i); showToast(pick(['答えを新しいタブに開きました (タブを切り替えて見られます)', 'Opened the answer in a new tab']), 3500); return; }
   if (act === 'prev') tutor.i--;
   if (act === 'next') {
     if (tutor.i < tutor.t.steps.length - 1) tutor.i++;
@@ -305,13 +238,28 @@ document.getElementById('tutor').onclick = e => {
   renderTutor();
 };
 
-// ---------- 学ぶ (チュートリアル一覧) ----------
+// ---------- 学ぶ (チュートリアル一覧: ジャンルごとのリスト) ----------
+let learnGenre = 'all';
 function openLearn() {
-  const done = new Set(learned());
-  document.getElementById('learnBody').innerHTML = `<h2>📚 ${pick(['学ぶ', 'Learn'])}</h2>`
-    + `<p class="hint">${pick(['手順どおりにブロックを置くと自動でチェックされます。順番に進めると C# の基本が身につきます。', 'Place blocks as instructed and each step is checked automatically. Go in order to learn the basics of C#.'])}</p>`
-    + `<div id="tplList">${TUTORIALS.map((t, i) => `<button class="tpl" data-t="${i}"><b>${done.has(t.id) ? '✅ ' : ''}${esc(pick(t.title))}</b><small>${esc(pick(t.desc))}</small></button>`).join('')}</div>`
-    + `<div class="help-sec">${pick(['知っておくと便利', 'Good to know'])}</div><ul class="tips">${[
+  renderLearn();
+  document.getElementById('learnDlg').showModal();
+}
+function renderLearn() {
+  const done = new Set(learned()), count = g => TUTORIALS.filter(t => g === 'all' || t.genre === g);
+  const prog = g => { const list = count(g), n = list.filter(t => done.has(t.id)).length; return `<span class="lg-prog"><span style="width:${list.length ? n / list.length * 100 : 0}%"></span></span><small>${n}/${list.length}</small>`; };
+  const genres = [['all', '📚', ['すべて', 'All']], ...GENRES];
+  const list = count(learnGenre);
+  // 次にやるとよいレッスン (まだ終わっていない最初のもの)
+  const next = TUTORIALS.find(t => !done.has(t.id));
+  document.getElementById('learnBody').innerHTML = `<div class="settings-head"><h2>📚 ${pick(['学ぶ', 'Learn'])}</h2><span class="lg-total">${pick(['完了', 'Done'])} ${done.size} / ${TUTORIALS.length}</span></div>`
+    + `<p class="hint">${pick(['手順どおりにブロックを置くと自動でチェックされます。迷ったら各レッスンの「答えを見る」も使えます。', 'Place blocks as instructed and each step is checked automatically. Use "Show answer" in a lesson if you get stuck.'])}</p>`
+    + (next ? `<button class="lg-next" data-t="${TUTORIALS.indexOf(next)}">▶ ${pick(['次のおすすめ', 'Recommended next'])}: <b>${esc(pick(next.title))}</b></button>` : '')
+    + `<div class="lg"><nav class="lg-genres" role="tablist">${genres.map(([id, ic, label]) => `<button role="tab" data-g="${id}" class="${id === learnGenre ? 'on' : ''}" aria-selected="${id === learnGenre}">`
+      + `<span class="lg-ic">${ic}</span><span class="lg-name">${esc(pick(label))}</span>${prog(id)}</button>`).join('')}</nav>`
+    + `<div class="lg-list">${list.map((t, n) => `<button class="lg-item${done.has(t.id) ? ' done' : ''}" data-t="${TUTORIALS.indexOf(t)}">`
+      + `<span class="lg-no">${done.has(t.id) ? '✔' : n + 1}</span><span class="lg-text"><b>${esc(pick(t.title))}</b><small>${esc(pick(t.desc))}</small></span>`
+      + `<span class="lg-level lv${t.level}">${esc(pick(LEVELS[t.level]))}</span>${learnGenre === 'all' ? `<span class="lg-genre">${GENRES.find(g => g[0] === t.genre)[1]}</span>` : ''}</button>`).join('')}</div></div>`
+    + `<details class="lg-tips"><summary>${pick(['知っておくと便利', 'Good to know'])}</summary><ul class="tips">${[
       ['ブロックを選ぶと、下の「ヘルプ」に説明と C# の書き方が出ます。', 'Select a block to see its explanation and C# in "Help" below.'],
       ['エラーは「問題」に出ます。ブロックを選ぶと、エラーのやさしい説明も「ヘルプ」に出ます。', 'Errors appear in "Problems". Select the block to see an easy explanation in "Help".'],
       ['「ヒント」には、Unity でよくある失敗を防ぐコツが出ます。', '"Hints" shows tips that prevent common Unity mistakes.'],
@@ -319,10 +267,14 @@ function openLearn() {
       ['Ctrl+K でブロックを検索できます。「音」「ジャンプ」などの言葉でも探せます。', 'Ctrl+K searches blocks, also by words like "sound" or "jump".'],
       ['🔰 かんたんモードでは、よく使うブロックだけが表示されます。', '🔰 Beginner mode shows only common blocks.'],
       ['「テンプレート」から、よく使うスクリプトの完成例を開けます。', '"Templates" opens finished examples of common scripts.'],
-    ].map(x => `<li>${esc(pick(x))}</li>`).join('')}</ul>`;
-  document.getElementById('learnDlg').showModal();
+    ].map(x => `<li>${esc(pick(x))}</li>`).join('')}</ul></details>`;
 }
-document.getElementById('learnBody').onclick = e => { const b = e.target.closest('[data-t]'); if (b) startTutorial(TUTORIALS[+b.dataset.t]); };
+document.getElementById('learnBody').onclick = e => {
+  const g = e.target.closest('[data-g]');
+  if (g) { learnGenre = g.dataset.g; renderLearn(); return; }
+  const b = e.target.closest('[data-t]');
+  if (b) startTutorial(TUTORIALS[+b.dataset.t]);
+};
 document.getElementById('learnClose').onclick = () => document.getElementById('learnDlg').close();
 document.getElementById('learn').onclick = openLearn;
 

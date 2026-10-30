@@ -381,3 +381,32 @@ kbd { font: 11.5px ui-monospace, Consolas, monospace; padding: 2px 7px; border: 
 .setup-opt.on { border-color: var(--accent); background: var(--accent-weak); box-shadow: 0 0 0 2px var(--accent-weak); }
 .setup-nav { display: flex; } .setup-nav .grow { flex: 1; }
 #catMenu { min-width: 230px; }
+
+/* 学ぶ: ジャンルごとのレッスン一覧 */
+#learnDlg { width: min(900px, calc(100vw - 32px)); }
+.lg-total { font-size: 13px; color: var(--muted); }
+.lg-next { display: block; width: 100%; text-align: left; margin: 4px 0 12px; padding: 10px 14px; border-color: var(--accent); background: var(--accent-weak); white-space: normal; }
+.lg { display: grid; grid-template-columns: 220px 1fr; gap: 12px; min-height: 320px; }
+.lg-genres { display: flex; flex-direction: column; gap: 2px; max-height: 56vh; overflow: auto; }
+.lg-genres button { display: grid; grid-template-columns: 24px 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 6px; text-align: left; border: 0; background: transparent; padding: 7px 10px; border-radius: 8px; }
+.lg-genres button.on { background: var(--accent-weak); font-weight: 600; }
+.lg-ic { grid-row: span 2; font-size: 17px; }
+.lg-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.lg-genres small { font-size: 11px; color: var(--muted); grid-column: 3; grid-row: 1; }
+.lg-prog { grid-column: 2 / 4; grid-row: 2; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; margin-top: 4px; }
+.lg-prog span { display: block; height: 100%; background: var(--ok); }
+.lg-list { display: flex; flex-direction: column; gap: 6px; max-height: 56vh; overflow: auto; padding-right: 4px; }
+.lg-item { display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; white-space: normal; border-radius: 10px; }
+.lg-item:hover { border-color: var(--accent); }
+.lg-no { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--hover); font-size: 13px; font-weight: 700; color: var(--muted); }
+.lg-item.done .lg-no { background: var(--ok); color: #fff; }
+.lg-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lg-text small { color: var(--muted); }
+.lg-level { flex: none; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.lv1 { color: #1a7f37; background: rgba(26, 127, 55, .12); } .lv2 { color: #9a6700; background: rgba(191, 135, 0, .14); } .lv3 { color: #cf222e; background: rgba(207, 34, 46, .12); }
+.lg-genre { flex: none; font-size: 16px; }
+.lg-tips { margin-top: 12px; font-size: 13px; }
+.lg-tips summary { cursor: pointer; color: var(--muted); }
+@media (max-width: 640px) { .lg { grid-template-columns: 1fr; } .lg-genres { flex-direction: row; overflow-x: auto; } .lg-genres button { min-width: 140px; } }
+.tutor-answer pre { max-height: 220px; overflow: auto; background: var(--code-bg); color: var(--code-fg); border-radius: 8px; padding: 8px 10px; font-size: 12px; margin: 6px 0; }
+.tutor-answer button { font-size: 12px; }

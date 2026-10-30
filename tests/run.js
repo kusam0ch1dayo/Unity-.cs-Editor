@@ -103,6 +103,21 @@ async function langTests(browser, base, lang) {
     return bad;
   });
   check(`チュートリアルが始められて、判定が動く`, !tut.length, tut.join(' / '));
+  const lessons = await p.evaluate(() => {
+    const bad = [], cats = new Set(toolbox.contents.map(c => c.name)), genres = new Set(GENRES.map(g => g[0]));
+    for (const t of TUTORIALS) {
+      if (!genres.has(t.genre) || !LEVELS[t.level]) bad.push(`${t.id}: genre / level`);
+      importCs(t.start, false); update();
+      t.steps.forEach((s, i) => { if (s.check && s.check(code)) bad.push(`${t.id}: ${i + 1} は最初から合格`); if (s.cat && !cats.has(s.cat) && !cats.has(tr(s.cat))) bad.push(`${t.id}: カテゴリ ${s.cat}`); });
+      if (!t.answer) continue;
+      const r = importCs(t.answer, false); update();
+      t.steps.forEach((s, i) => { if (s.check && !String(s.check).includes('selectedId') && !s.check(code)) bad.push(`${t.id}: 答えで ${i + 1} が不合格`); });
+      if (r.log.length) bad.push(`${t.id}: 答えに C# 文ブロック`);
+      if (issues.some(x => x.level === 'error')) bad.push(`${t.id}: 答えにエラー`);
+    }
+    return { bad, n: TUTORIALS.length, ids: new Set(TUTORIALS.map(t => t.id)).size };
+  });
+  check(`レッスン (${lessons.n} 個) の答えはすべての手順に合格し、エラーがない`, lessons.n >= 40 && lessons.ids === lessons.n && !lessons.bad.length, lessons.bad.join(' / '));
 
   if (lang === 'en') {
     const jp = await p.evaluate(() => {
@@ -416,6 +431,12 @@ async function toolTests(browser, base) {
 
   await ev(() => document.getElementById('sample').click()); await p.waitForTimeout(200);
   await ev(() => { openUnityErrors(); document.getElementById('ueText').value = "Assets/Scripts/PlayerController.cs(26,13): error CS0103: The name 'h' does not exist in the current context\nNullReferenceException: Object reference not set to an instance of an object\nPlayerController.Update () (at Assets/Scripts/PlayerController.cs:27)"; document.querySelector('[data-ue=parse]').click(); });
+  await ev(() => { openLearn(); document.querySelector('#learnBody [data-g="time"]').click(); });
+  check('学ぶ: ジャンルを選ぶと、そのジャンルのレッスンだけが並ぶ', await ev(() => [...document.querySelectorAll('#learnBody .lg-item')].every(b => TUTORIALS[+b.dataset.t].genre === 'time') && document.querySelectorAll('#learnBody .lg-item').length === TUTORIALS.filter(t => t.genre === 'time').length));
+  await ev(() => document.querySelector('#learnBody .lg-item').click()); await p.waitForTimeout(200);
+  await ev(() => document.querySelector('#tutor [data-act="answer"]').click()); await p.waitForTimeout(200);
+  check('レッスンの「答えを新しいタブで開く」で答えのブロックが開く (今のタブはそのまま)', await ev(() => project.files.length >= 2 && !document.getElementById('tutor').hidden && JSON.stringify(project.files.at(-1).state).includes('timer')));
+  await ev(() => { tutor = null; renderTutor(); });
   check('Unity のエラー (コンパイル・実行時) を読み取って説明する', await ev(() => parsedErrors.map(x => x.code + '@' + x.line).join(',') === 'CS0103@26,NullReferenceException@27' && document.querySelectorAll('#ueList .ue-help').length === 2));
   await ev(() => document.querySelector('[data-ue=go]').click());
   check('Unity のエラーの行のブロックへ移動する', await ev(() => Blockly.common.getSelected()?.type === 'var_local' && code.split('\n')[25].includes('float h')));

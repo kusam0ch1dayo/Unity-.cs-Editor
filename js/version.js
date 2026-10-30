@@ -1,7 +1,11 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.14.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.14.0': [
+    ['チュートリアルを 43 レッスンに (6 → 43)。ジャンル (10 種類) ごとのリストで、基礎・中級・応用のレベル付き', 'Tutorials grew from 6 to 43 lessons, listed by 10 genres with Basic / Intermediate / Advanced levels'],
+    ['ジャンルごとの進み具合、次のおすすめレッスン、各レッスンの「答えを見る」', 'Progress per genre, a recommended next lesson and "Show answer" in every lesson'],
+  ],
   '1.13.0': [
     ['ブロック画面とコード画面の間の仕切りをドラッグして、幅を自由に変えられるように (ダブルクリックで元に戻す)', 'Drag the divider between blocks and code to resize them (double-click to reset)'],
     ['はじめて開いたときに、経験・画面の配分・Unity バージョン・明るさを質問して画面を合わせる初期設定 (設定からやり直せます)', 'First-run setup asks about experience, layout, Unity version and brightness (run it again from Settings)'],
