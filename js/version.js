@@ -1,7 +1,10 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.11.1';
+const APP_VERSION = '1.12.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.12.0': [
+    ['設定に「詳細」タブ: バージョン更新履歴・README などのドキュメント・キーボード操作の一覧・このブラウザで使える機能', 'New "Details" tab in Settings: version history, documents such as the README, keyboard shortcuts and supported features'],
+  ],
   '1.11.1': [
     ['ブロックに最初から入っている文字・数値・true/false のブロックを、外したり削除したりできるように', 'Default text / number / true-false blocks inside other blocks can now be removed'],
   ],
@@ -43,5 +46,15 @@ const CHANGES = {
     ['タブの複製・ドラッグで並べ替え・閉じたタブを開き直す (Alt+Shift+T)・右クリックメニュー', 'Duplicate tabs, drag to reorder, reopen closed tabs (Alt+Shift+T), right-click menu'],
     ['設定で C# の文字サイズとブロックの大きさを変更', 'Change the C# font size and block size in Settings'],
     ['画面のデザインを改善', 'Refreshed design'],
+  ],
+  '1.6.0': [
+    ['プロジェクトの保存・読み込み (.json)、URL で共有、編集履歴、マイブロック', 'Project files (.json), share links, history, My blocks'],
+    ['アプリとしてインストール (PWA)、C# の直接編集、拡張パック', 'Install as an app (PWA), direct C# editing, block packs'],
+    ['自動テスト (GitHub Actions)、画面と設定にバージョンを表示', 'Automated tests (GitHub Actions), version shown in the app'],
+  ],
+  '1.0.0 ~ 1.5': [
+    ['ブロックから Unity の C# を作る・C# をブロックに戻す読み込み・足りないブロックのログと依頼文', 'Blocks to Unity C#, C# import back to blocks, missing-block log and request text'],
+    ['文法・型のチェック、Tab 補完、取り消し / やり直し、複数タブ、zip 保存', 'Syntax and type checks, Tab completion, undo / redo, tabs, zip export'],
+    ['テンプレート、チュートリアル、かんたんモード、ヘルプ、ダークモード、日本語 / English、メニューとショートカット', 'Templates, tutorials, beginner mode, help, dark mode, Japanese / English, menus and shortcuts'],
   ],
 };

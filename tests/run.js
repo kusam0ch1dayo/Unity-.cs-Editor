@@ -193,8 +193,17 @@ async function featureTests(browser, base) {
 
   // ⑥ PWA
   await p.click('#settingsBtn');
-  await p.click('#settingsBody [data-stab="general"]');
+  await p.click('#settingsBody [data-stab="about"]');
   check('設定画面にバージョンが出る', await p.evaluate(() => document.getElementById('settingsBody').innerText.includes('v' + APP_VERSION)));
+  check('詳細タブに更新履歴が全部出る (今の版は開いた状態)', await p.evaluate(() => document.querySelectorAll('#settingsBody .changelog details').length === Object.keys(CHANGES).length
+    && document.querySelector('#settingsBody .changelog details[open] summary').textContent.includes(APP_VERSION)));
+  await p.click('#settingsBody [data-doc="README.md"]');
+  await p.waitForFunction(() => document.querySelector('#aboutDoc h3'));
+  check('詳細タブで README を読める (見出し・表・リンク)', await p.evaluate(() => document.querySelectorAll('#aboutDoc h4').length > 3 && !!document.querySelector('#aboutDoc table') && !!document.querySelector('#aboutDoc a[href^="https://"]')
+    && !document.querySelector('#aboutDoc script')));
+  await p.click('#settingsBody [data-doc="docs/block-packs.md"]');
+  await p.waitForFunction(() => /into/.test(document.getElementById('aboutDoc').textContent));
+  check('詳細タブで拡張パックの作り方を読める', await p.evaluate(() => !!document.querySelector('#aboutDoc .md-code')));
   await p.click('#settingsClose');
   check('manifest がある (アプリとしてインストール)', await p.evaluate(async () => !!document.querySelector('link[rel=manifest]') && (await (await fetch('manifest.webmanifest')).json()).icons.length > 0));
 

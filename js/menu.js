@@ -144,7 +144,7 @@ const settingsDlg = document.getElementById('settingsDlg');
 function openSettings() { renderSettings(); settingsDlg.showModal(); }
 document.getElementById('settingsClose').onclick = () => settingsDlg.close();
 // 設定画面はタブで分ける (一般 / テーマ / ショートカット / 拡張)
-const SETTINGS_TABS = [['general', '⚙', ['一般', 'General']], ['theme', '🎨', ['テーマ', 'Theme']], ['shortcuts', '⭐', ['ショートカット', 'Shortcuts']], ['ext', '🧩', ['拡張', 'Extensions']]];
+const SETTINGS_TABS = [['general', '⚙', ['一般', 'General']], ['theme', '🎨', ['テーマ', 'Theme']], ['shortcuts', '⭐', ['ショートカット', 'Shortcuts']], ['ext', '🧩', ['拡張', 'Extensions']], ['about', 'ℹ️', ['詳細', 'Details']]];
 let settingsTab = 'general';
 function renderSettings() {
   const opt = (v, cur, text) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${esc(text)}</option>`;
@@ -160,12 +160,7 @@ function renderSettings() {
     + (typeof unityVerSettings === 'function' ? unityVerSettings() : '') + '</section>'
     + (typeof codeStyleSettings === 'function' ? codeStyleSettings() : '')
     + (typeof assetsSettings === 'function' ? assetsSettings() : '')
-    + (typeof transferSettings === 'function' ? transferSettings() : '')
-    + `<section><h3>${pick(['このアプリについて', 'About'])}</h3>`
-    + `<div class="set-row"><span>${pick(['バージョン', 'Version'])}</span><b>v${APP_VERSION}</b></div>`
-    + `<div class="set-row"><span>${pick(['開き方', 'Running as'])}</span><span>${matchMedia('(display-mode: standalone)').matches ? pick(['インストールしたアプリ', 'Installed app'])
-      : location.protocol === 'file:' ? pick(['パソコン内のファイル', 'Local file']) : pick(['ブラウザ', 'Browser'])}</span></div>`
-    + `<div class="set-row"><span>${pick(['更新内容', 'Release notes'])}</span><a href="https://github.com/kusam0ch1dayo/Unity-.cs-Editor/releases" target="_blank" rel="noopener">GitHub Releases</a></div></section>`;
+    + (typeof transferSettings === 'function' ? transferSettings() : '');
   const shortcutsTab = () => ''
     + `<section><h3>${pick(['ショートカット', 'Shortcuts'])}</h3><p class="hint">${pick(['チェックした項目がヘッダーに並び、ワンクリックで実行できます。↑↓ で並び順を変えられます。',
       'Checked items appear in the header for one-click access. Use ↑↓ to change the order.'])}</p>`
@@ -178,7 +173,7 @@ function renderSettings() {
     + `<div class="row end"><button data-set="reset">${pick(['ショートカットを初期設定に戻す', 'Reset shortcuts'])}</button></div></section>`;
   const ext = () => ''
     + (typeof packSettings === 'function' ? packSettings() : '') + (typeof snippetSettings === 'function' ? snippetSettings() : '');
-  const body = { general, theme: () => (typeof themeSettings === 'function' ? themeSettings() : ''), shortcuts: shortcutsTab, ext }[settingsTab];
+  const body = { general, theme: () => (typeof themeSettings === 'function' ? themeSettings() : ''), shortcuts: shortcutsTab, ext, about: () => (typeof aboutSettings === 'function' ? aboutSettings() : '') }[settingsTab];
   document.getElementById('settingsBody').innerHTML = tabs + `<div class="set-panel">${body()}</div>`;
 }
 document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
