@@ -1,5 +1,5 @@
 // 設定の「詳細」タブ: このアプリについて・更新履歴・ドキュメント (README など)・キーボード操作・このブラウザで使える機能
-const REPO_URL = 'https://github.com/kusam0ch1dayo/Unity-.cs-Editor';
+const REPO_URL = 'https://github.com/kusam0ch1dayo/Unity-Block-Coder';
 const DOCS = [['README.md', ['使い方 (README)', 'Guide (README)']], ['docs/block-packs.md', ['拡張パックの作り方', 'Making block packs']]];
 let aboutDoc = null;   // 開いているドキュメントのパス
 

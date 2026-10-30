@@ -1,9 +1,9 @@
-# Unity-.cs-Editor
+# Unity Block Coder
 
 ブロックを組み合わせて、Unity 用の C# スクリプトを作れるブラウザアプリです。
 C# を読み込んでブロックに戻すこともできます。
 
-**▶ [ブラウザですぐに試す](https://kusam0ch1dayo.github.io/Unity-.cs-Editor/)** (インストール不要・アプリとしてインストールも可)
+**▶ [ブラウザですぐに試す](https://kusam0ch1dayo.github.io/Unity-Block-Coder/)** (インストール不要・アプリとしてインストールも可)
 
 ## 使い方
 
@@ -131,7 +131,7 @@ npm test
 
 ## 協力・報告
 
-- 不具合の報告やブロック追加の依頼は [Issues](https://github.com/kusam0ch1dayo/Unity-.cs-Editor/issues/new/choose) から
+- 不具合の報告やブロック追加の依頼は [Issues](https://github.com/kusam0ch1dayo/Unity-Block-Coder/issues/new/choose) から
 - 脆弱性は公開せずに [SECURITY.md](SECURITY.md) の方法で
 - 変更の送り方は [CONTRIBUTING.md](CONTRIBUTING.md)
 - 更新・リリースの手順は [docs/maintenance.md](docs/maintenance.md)

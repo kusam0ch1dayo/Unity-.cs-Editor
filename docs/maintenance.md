@@ -11,7 +11,7 @@
 | main にプッシュ → Actions の **Test** が緑になるのを確認 | GitHub の Actions タブ |
 | 新機能なら README の「主な機能」「ファイル構成」を更新 | README.md |
 
-プッシュすると GitHub Pages (https://kusam0ch1dayo.github.io/Unity-.cs-Editor/) は 1〜2 分で自動的に更新される。
+プッシュすると GitHub Pages (https://kusam0ch1dayo.github.io/Unity-Block-Coder/) は 1〜2 分で自動的に更新される。
 
 ## 2. リリースを出すとき
 

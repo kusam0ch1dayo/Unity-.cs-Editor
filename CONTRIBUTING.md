@@ -4,7 +4,7 @@
 
 ## 不具合の報告・ブロックの依頼
 
-[Issues](https://github.com/kusam0ch1dayo/Unity-.cs-Editor/issues/new/choose) から、テンプレートを選んで送ってください。
+[Issues](https://github.com/kusam0ch1dayo/Unity-Block-Coder/issues/new/choose) から、テンプレートを選んで送ってください。
 
 - **不具合の報告**: 再現手順と、関係する C# があると助かります
 - **ブロック追加の依頼**: C# を読み込んだあと、読み込みログの「依頼文を作成」で作った文をそのまま貼り付けられます

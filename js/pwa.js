@@ -36,7 +36,7 @@ const whatsNewDlg = document.body.appendChild(Object.assign(document.createEleme
 function openWhatsNew() {
   whatsNewDlg.innerHTML = `<div class="settings-head"><h2>✨ ${pick([`v${APP_VERSION} の新しくなった点`, `What's new in v${APP_VERSION}`])}</h2><button data-close>${tr('閉じる')}</button></div>`
     + `<ul class="tips">${(CHANGES[APP_VERSION] || []).map(c => `<li>${esc(pick(c))}</li>`).join('')}</ul>`
-    + `<p class="hint"><a href="https://github.com/kusam0ch1dayo/Unity-.cs-Editor/releases" target="_blank" rel="noopener">${pick(['これまでの更新内容 (GitHub Releases)', 'All release notes (GitHub Releases)'])}</a></p>`;
+    + `<p class="hint"><a href="https://github.com/kusam0ch1dayo/Unity-Block-Coder/releases" target="_blank" rel="noopener">${pick(['これまでの更新内容 (GitHub Releases)', 'All release notes (GitHub Releases)'])}</a></p>`;
   whatsNewDlg.showModal();
 }
 whatsNewDlg.onclick = e => { if (e.target.closest('[data-close]') || e.target === whatsNewDlg) whatsNewDlg.close(); };

@@ -12,7 +12,7 @@ Please do **not** open a public issue. Use **Security → Report a vulnerability
 
 ## 対象 / Scope
 
-- 公開ページ: https://kusam0ch1dayo.github.io/Unity-.cs-Editor/
+- 公開ページ: https://kusam0ch1dayo.github.io/Unity-Block-Coder/
 - このリポジトリのコード (`index.html`, `js/`, `css/`, `sw.js`, `.github/workflows/`)
 
 このアプリはブラウザの中だけで動き、サーバーへデータを送りません。作ったスクリプト・履歴・マイブロック・拡張パックは、使っているブラウザの中 (localStorage) にだけ保存されます。

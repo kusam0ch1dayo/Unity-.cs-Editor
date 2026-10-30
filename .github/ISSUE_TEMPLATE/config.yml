@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: 脆弱性の報告 / Security vulnerability
-    url: https://github.com/kusam0ch1dayo/Unity-.cs-Editor/security/advisories/new
+    url: https://github.com/kusam0ch1dayo/Unity-Block-Coder/security/advisories/new
     about: 脆弱性は公開の Issue ではなく、こちらから非公開で報告してください。
   - name: アプリを開く / Open the app
-    url: https://kusam0ch1dayo.github.io/Unity-.cs-Editor/
+    url: https://kusam0ch1dayo.github.io/Unity-Block-Coder/
     about: 公開ページでアプリを試せます。

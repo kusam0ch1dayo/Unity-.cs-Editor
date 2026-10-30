@@ -7,7 +7,7 @@ body:
       value: |
         C# を読み込んで「C# 文 / 式 / メンバー」ブロックになった部分は、読み込みログの「依頼文を作成」でまとめられます。
         作った依頼文を下の欄にそのまま貼り付けてください。
-        自分でブロックを足したい場合は、拡張パック ([docs/block-packs.md](https://github.com/kusam0ch1dayo/Unity-.cs-Editor/blob/main/docs/block-packs.md)) でも追加できます。
+        自分でブロックを足したい場合は、拡張パック ([docs/block-packs.md](https://github.com/kusam0ch1dayo/Unity-Block-Coder/blob/main/docs/block-packs.md)) でも追加できます。
   - type: textarea
     id: request
     attributes:
