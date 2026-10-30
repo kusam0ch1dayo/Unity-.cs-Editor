@@ -11,7 +11,9 @@ const SEARCH_ALIASES = {
 let searchIndex = null;
 function buildSearchIndex() {
   const tmp = new Blockly.Workspace(), out = [];
-  for (const c of activeToolbox.contents) for (const item of c.contents) {
+  // しまったカテゴリ (フォルダの中のカテゴリ) も探す
+  const cats = activeToolbox.contents.flatMap(c => (c.contents || []).some(x => x.kind === 'category') ? c.contents.filter(x => x.kind === 'category') : [c]);
+  for (const c of cats) for (const item of c.contents) {
     let text = '';
     try {
       const b = Blockly.serialization.blocks.append({ type: item.type, fields: item.fields, inputs: item.inputs }, tmp);

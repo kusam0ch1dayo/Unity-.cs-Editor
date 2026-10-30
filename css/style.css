@@ -343,3 +343,41 @@ input[type="color"] { width: 42px; height: 28px; padding: 2px; border: 1px solid
 kbd { font: 11.5px ui-monospace, Consolas, monospace; padding: 2px 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; background: var(--panel); white-space: nowrap; }
 .feat { font-size: 12px; color: var(--muted); } .feat.on { color: var(--ok); font-weight: 600; }
 .set-row .row a { font-size: 13px; }
+
+/* ブロックとコードの仕切り (ドラッグで幅を変える) */
+#left { flex: 1 1 0; }
+#side { flex: 0 0 var(--side, 40%); min-width: 0; min-height: 0; }
+#splitter { flex: none; width: 6px; margin: 0 -3px; z-index: 30; cursor: col-resize; position: relative; background: transparent; touch-action: none; }
+#splitter::after { content: ""; position: absolute; inset: 0 2px; background: var(--border); transition: background-color .15s; }
+#splitter:hover::after, #splitter.dragging::after, #splitter:focus-visible::after { background: var(--accent); }
+@media (max-width: 760px) {
+  #left { flex: 1 1 0; }
+  #side { flex: 0 0 var(--side, 40%); }
+  #splitter { width: auto; height: 6px; margin: -3px 0; cursor: row-resize; }
+  #splitter::after { inset: 2px 0; }
+}
+/* ミニマップ */
+#minimap { position: absolute; right: 22px; z-index: 20; border-radius: 10px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .12); cursor: pointer; backdrop-filter: blur(2px); }
+#minimap[hidden] { display: none; }
+/* エラー・警告の表示 (コード側) */
+.ln.err { background: rgba(255, 70, 70, .17); box-shadow: inset 3px 0 0 var(--code-err); }
+.ln.err::before { color: var(--code-err); font-weight: 700; }
+.ln.warn { background: rgba(245, 192, 74, .14); box-shadow: inset 3px 0 0 var(--code-warn); }
+.ln.warn::before { color: var(--code-warn); font-weight: 700; }
+/* エラー・警告の表示 (ブロック側): そのブロックの輪郭だけを赤 / 黄色で光らせる */
+.ubc-error > .blocklyPath { stroke: #ff3b3b !important; stroke-width: 3px !important; filter: drop-shadow(0 0 4px rgba(255, 59, 59, .9)); }
+.ubc-warn > .blocklyPath { stroke: #f5b301 !important; stroke-width: 2.5px !important; stroke-dasharray: 6 3; }
+/* 初期設定の質問 */
+.setup-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
+.setup-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.setup-dots span.done { background: var(--accent-weak); } .setup-dots span.on { background: var(--accent); width: 22px; border-radius: 4px; }
+.setup-count { margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
+#welcomeBody h2 { text-align: center; }
+.setup-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.setup-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 10px; white-space: normal; text-align: center; border-radius: 12px; }
+.setup-opt .setup-ic { font-size: 28px; }
+.setup-opt small { color: var(--muted); font-size: 11.5px; }
+.setup-opt.on { border-color: var(--accent); background: var(--accent-weak); box-shadow: 0 0 0 2px var(--accent-weak); }
+.setup-nav { display: flex; } .setup-nav .grow { flex: 1; }
+#catMenu { min-width: 230px; }

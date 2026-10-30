@@ -457,6 +457,68 @@ async function toolTests(browser, base) {
   await p2.context().close();
 }
 
+async function layoutTests(browser, base) {
+  console.log('\n[ja] 初期設定・幅の調整・カテゴリの右クリック・エラーの表示・ミニマップ');
+  // はじめて開いた人には質問が出る
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 860 } });
+  await ctx.addInitScript(() => localStorage.setItem('unity-block-coder-lang', 'ja'));
+  const p = await ctx.newPage(); p.errors = []; p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(`${base}/index.html`); await p.waitForFunction(() => typeof tsParser !== 'undefined' && tsParser);
+  await p.waitForSelector('#welcomeDlg[open] .setup-opt');
+  check('はじめて開くと初期設定の質問が出る', true);
+  for (const v of ['new', 'code', '2022', 'dark']) { await p.click(`.setup-opt[data-opt="${v}"]`); await p.click('[data-setup="next"]'); }
+  await p.click('[data-w="free"]');
+  check('答えに合わせて画面が変わる (かんたんモード・コード中心・Unity 2022・ダーク)', await p.evaluate(() => beginner && layout.side === 60 && unityVer === '2022' && themeMode === 'dark' && !document.getElementById('welcomeDlg').open));
+  await p.evaluate(() => { openSettings(); settingsTab = 'general'; renderSettings(); });
+  await p.click('#settingsBody [data-layout="setup"]');
+  check('初期設定は設定から何回でもやり直せる (今の設定が選ばれた状態)', await p.evaluate(() => document.getElementById('welcomeDlg').open && document.querySelector('.setup-opt.on')?.dataset.opt === 'new'));
+  await p.click('[data-setup="skip"]');
+  await p.evaluate(() => { setBeginner(false); setThemeMode('light'); setUnityVer('6'); });
+
+  // 仕切りをドラッグして幅を変える
+  const s = await p.evaluate(() => { const r = document.getElementById('splitter').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + 300 }; });
+  await p.mouse.move(s.x, s.y); await p.mouse.down(); await p.mouse.move(s.x + 280, s.y, { steps: 8 }); await p.mouse.up();
+  check('仕切りのドラッグでコード画面の幅を変えられる', await p.evaluate(() => layout.side === 40 && Math.abs(document.getElementById('side').getBoundingClientRect().width - innerWidth * 0.4) < 6));
+  await p.dblclick('#splitter');
+  check('仕切りのダブルクリックで元の幅に戻る', await p.evaluate(() => layout.side === 40));
+
+  // エラーの表示
+  await p.evaluate(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    void Start()\n    {\n        Debug.Log(spead);\n        int Count = 1;\n    }\n}\n', false); update(); });
+  await p.waitForTimeout(200);
+  check('エラーの行がコード側で赤くなる (警告は黄色)', await p.evaluate(() => [...document.querySelectorAll('#code .ln.err')].map(l => l.textContent).join('').includes('Debug.Log(spead)')
+    && [...document.querySelectorAll('#code .ln.warn')].map(l => l.textContent).join('').includes('int Count')));
+  check('エラーのブロックがブロック側で赤くなる (警告は黄色)', await p.evaluate(() => document.querySelector('.ubc-error')?.getAttribute('data-id') === ws.getAllBlocks(false).find(b => b.type === 'var_get').id && !!document.querySelector('.ubc-warn')));
+  await p.evaluate(() => { importCs('using UnityEngine;\npublic class A : MonoBehaviour\n{\n    void Start()\n    {\n        Debug.Log(1);\n    }\n}\n', false); update(); });
+  check('直すと赤い表示が消える', await p.evaluate(() => !document.querySelector('.ubc-error, .ubc-warn, #code .ln.err')));
+
+  // ミニマップ
+  await p.evaluate(() => { document.getElementById('sample').click(); ws.setScale(1.5); }); await p.waitForTimeout(300);
+  check('ミニマップがブロック画面の右上に出る', await p.evaluate(() => { const m = document.getElementById('minimap').getBoundingClientRect(), l = document.getElementById('left').getBoundingClientRect(); return !document.getElementById('minimap').hidden && m.right > l.right - 40 && m.top < l.top + 60; }));
+  const before = await p.evaluate(() => ws.scrollY);
+  const m = await p.evaluate(() => { const r = document.getElementById('minimap').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height - 6 }; });
+  await p.mouse.click(m.x, m.y); await p.waitForTimeout(100);
+  check('ミニマップをクリックするとその場所へ移動する', await p.evaluate(b => ws.scrollY !== b, before));
+  await p.evaluate(() => setMinimap(false)); await p.waitForTimeout(50);
+  check('ミニマップは設定で消せる', await p.evaluate(() => document.getElementById('minimap').hidden));
+  await p.evaluate(() => setMinimap(true));
+
+  // カテゴリの右クリック
+  const rowOf = name => p.evaluate(n => { const it = ws.getToolbox().getToolboxItems().find(i => i.getName && i.getName() === n); const r = it.getDiv().getBoundingClientRect(); return { x: r.x + 20, y: r.y + r.height / 2 }; }, name);
+  let r = await rowOf('ラムダ式'); await p.mouse.click(r.x, r.y, { button: 'right' });
+  check('カテゴリを右クリックするとメニューが出る', await p.evaluate(() => !document.getElementById('catMenu').hidden));
+  await p.click('#catMenu [data-cat="fold"]');
+  check('カテゴリをしまう (折りたたむ) と、しまったカテゴリのフォルダに入る', await p.evaluate(() => { const last = activeToolbox.contents.at(-1); return last.toolboxitemid === 'folded-categories' && last.contents[0].name === 'ラムダ式' && !activeToolbox.contents.slice(0, -1).some(c => c.name === 'ラムダ式'); }));
+  check('しまったカテゴリのブロックも検索で見つかる', await p.evaluate(() => { searchIndex = null; return buildSearchIndex().some(x => x.item.type === 'lambda_expr'); }));
+  r = await rowOf('辞書'); await p.mouse.click(r.x, r.y, { button: 'right' }); await p.click('#catMenu [data-cat="top"]');
+  check('カテゴリをいちばん上へ移動できる', await p.evaluate(() => activeToolbox.contents[0].name === '辞書'));
+  await p.reload(); await p.waitForFunction(() => typeof tsParser !== 'undefined' && tsParser);
+  check('カテゴリの並び・幅は次に開いたときも残る (質問は 2 回目からは出ない)', await p.evaluate(() => activeToolbox.contents[0].name === '辞書' && layout.folded.includes('ラムダ式') && !document.getElementById('welcomeDlg').open));
+  r = await rowOf('辞書'); await p.mouse.click(r.x, r.y, { button: 'right' }); await p.click('#catMenu [data-cat="reset"]');
+  check('カテゴリの並びを元に戻せる', await p.evaluate(() => activeToolbox.contents[0].name === 'クラス' && !layout.folded.length));
+  check('テスト中にエラーがない (画面の配置)', !p.errors.length, p.errors.join(' / '));
+  await ctx.close();
+}
+
 (async () => {
   const server = await serve(), base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
@@ -465,6 +527,7 @@ async function toolTests(browser, base) {
     await featureTests(browser, base);
     await qolTests(browser, base);
     await toolTests(browser, base);
+    await layoutTests(browser, base);
   } catch (e) { failed++; console.log('  ✖ ' + e.stack); if (process.env.GITHUB_ACTIONS) console.log(`::error title=テストが止まりました::${String(e.stack).replace(/\n/g, ' ').slice(0, 900)}`); }
   await browser.close(); server.close();
   fs.rmSync(tmp, { recursive: true, force: true });

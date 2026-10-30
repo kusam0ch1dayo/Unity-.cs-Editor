@@ -1,7 +1,14 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.13.0';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.13.0': [
+    ['ブロック画面とコード画面の間の仕切りをドラッグして、幅を自由に変えられるように (ダブルクリックで元に戻す)', 'Drag the divider between blocks and code to resize them (double-click to reset)'],
+    ['はじめて開いたときに、経験・画面の配分・Unity バージョン・明るさを質問して画面を合わせる初期設定 (設定からやり直せます)', 'First-run setup asks about experience, layout, Unity version and brightness (run it again from Settings)'],
+    ['カテゴリを右クリック: しまう (折りたたむ)・並べ替え・いちばん上へ・元に戻す', 'Right-click a category to fold it away, reorder it, move it to the top or reset'],
+    ['エラーのブロックとコードの行を赤く、警告を黄色く表示', 'Error blocks and code lines are shown in red, warnings in yellow'],
+    ['ブロック画面の右上にミニマップ (クリック・ドラッグで移動、エラーの場所も表示)', 'Minimap at the top right of the blocks (click or drag to move; shows errors too)'],
+  ],
   '1.12.0': [
     ['設定に「詳細」タブ: バージョン更新履歴・README などのドキュメント・キーボード操作の一覧・このブラウザで使える機能', 'New "Details" tab in Settings: version history, documents such as the README, keyboard shortcuts and supported features'],
   ],

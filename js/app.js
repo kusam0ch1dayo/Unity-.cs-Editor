@@ -42,8 +42,15 @@ function update() {
   fileName = scriptName(ws);
   document.getElementById('fname').textContent = fileName;
   issues = [...syntaxErrors(code), ...check()];
-  const errLines = new Set(issues.filter(x => x.line).map(x => x.line));
-  document.getElementById('code').innerHTML = hl(code).split('\n').map((l, i) => `<span class="ln${errLines.has(i + 1) ? ' err' : ''}" data-l="${i + 1}">${l}</span>`).join('');
+  // エラー・警告のある行 (構文エラーは行そのもの、ブロックのエラーはそのブロックの最初の行)
+  const lineLevel = new Map();
+  for (const x of issues) {
+    let owner = x.block;   // 値のブロックなどは行を持たないので、行を持つ外側のブロックまでたどる
+    while (owner && !blockRanges.has(owner.id)) owner = owner.getParent();
+    const ln = x.line || (owner && blockRanges.get(owner.id)[0]);
+    if (ln && lineLevel.get(ln) !== 'err') lineLevel.set(ln, x.level === 'error' ? 'err' : 'warn');
+  }
+  document.getElementById('code').innerHTML = hl(code).split('\n').map((l, i) => `<span class="ln${lineLevel.has(i + 1) ? ' ' + lineLevel.get(i + 1) : ''}" data-l="${i + 1}">${l}</span>`).join('');
   const nE = issues.filter(x => x.level === 'error').length, nW = issues.length - nE;
   const st = document.getElementById('status');
   st.textContent = nE || nW ? `✖ ${nE}  ⚠ ${nW}` : '✔ OK';
@@ -58,6 +65,7 @@ function update() {
   highlightBlock(selectedId);
   if (typeof saveProject === 'function') saveProject();
   if (typeof refreshSidePanels === 'function') refreshSidePanels();
+  if (typeof markIssueBlocks === 'function') markIssueBlocks();
 }
 document.getElementById('issues').onclick = e => {
   const fx = e.target.closest('.fix');

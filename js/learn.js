@@ -174,7 +174,8 @@ function refreshToolbox() {
   const extra = typeof snippetCategory === 'function' ? snippetCategory() : null;
   const adapted = typeof adaptToolboxJson === 'function' ? adaptToolboxJson(base) : base;
   const recent = typeof recentCategory === 'function' ? recentCategory() : null;
-  activeToolbox = { kind: 'categoryToolbox', contents: [...(recent ? [recent] : []), ...adapted, ...(extra ? [extra] : [])] };
+  const contents = [...(recent ? [recent] : []), ...adapted, ...(extra ? [extra] : [])];
+  activeToolbox = { kind: 'categoryToolbox', contents: typeof arrangeToolbox === 'function' ? arrangeToolbox(contents) : contents };
   ws.updateToolbox(activeToolbox);
   // カテゴリの行を、そのカテゴリの色でうっすら色付けする (CSS の --cat で使う)
   document.querySelectorAll('.blocklyToolboxDiv .blocklyTreeRow').forEach(r => r.style.setProperty('--cat', r.style.borderLeftColor));
@@ -339,7 +340,6 @@ function openWelcome() {
 document.getElementById('welcomeBody').onclick = e => {
   const w = e.target.closest('[data-w]')?.dataset.w;
   if (!w) return;
-  setBeginner(document.getElementById('welcomeBeginner').checked);
   try { localStorage.setItem(WELCOME_KEY, '1'); } catch (err) {}
   document.getElementById('welcomeDlg').close();
   if (w === 'learn') openLearn();
@@ -360,4 +360,4 @@ setBeginner(beginner);
 refreshLearn();
 let firstVisit = false;
 try { firstVisit = !localStorage.getItem(WELCOME_KEY); } catch (e) {}
-if (firstVisit) openWelcome();
+if (firstVisit) document.addEventListener('DOMContentLoaded', () => openWelcome());   // すべてのスクリプト (初期設定の質問 layout.js も) を読み込んでから開く
