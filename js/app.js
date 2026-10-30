@@ -4,6 +4,20 @@ const ws = Blockly.inject('blocks', {
   toolbox, renderer: 'zelos', comments: true, media: 'vendor/blockly/media/', trashcan: true, move: { scrollbars: true, drag: true, wheel: true },
   zoom: { controls: true, wheel: false, startScale: 0.75 }, grid: { spacing: 24, length: 2, colour: '#ddd', snap: true },
 });
+// 最初から入っている値 (シャドウブロック) は外せないので、ふつうのブロックに変える。
+// スロットが覚えている「既定の値」も消す (外したあとに同じ値がまた現れないように)
+function unshadow(blocks) {
+  Blockly.Events.disable();
+  try {
+    for (const b of blocks) {
+      if (!b.isShadow() || b.isDeadOrDying()) continue;
+      const c = (b.outputConnection || b.previousConnection)?.targetConnection;
+      b.setShadow(false);
+      if (c) c.setShadowState(null);
+    }
+  } finally { Blockly.Events.enable(); }
+}
+ws.addChangeListener(e => { if (e.type === Blockly.Events.BLOCK_CREATE) { const b = ws.getBlockById(e.blockId); if (b) unshadow(b.getDescendants(false)); } });
 const load = data => { Blockly.Events.setGroup(true); ws.clear(); Blockly.serialization.workspaces.load(data, ws, { recordUndo: true }); Blockly.Events.setGroup(false); };
 
 const KW = new Set('using public private protected internal static class void int float bool string var new return if else for foreach in while break continue true false null this base default'.split(' '));

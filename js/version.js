@@ -1,7 +1,10 @@
 // アプリのバージョン (ここだけを書き換える)。画面の表示・オフライン用キャッシュの名前・リリースのタグ名の確認に使う
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.11.1';
 // 新しくなった点 (更新したあとに 1 回だけ表示する)。新しい版を上に足していく
 const CHANGES = {
+  '1.11.1': [
+    ['ブロックに最初から入っている文字・数値・true/false のブロックを、外したり削除したりできるように', 'Default text / number / true-false blocks inside other blocks can now be removed'],
+  ],
   '1.11.0': [
     ['基本のブロックを追加: CancelInvoke・IsInvoking・enabled・Time.timeScale・フレームレート・タグで全部探す・型で探す・親子 (SetParent / GetChild / childCount)', 'New basic blocks: CancelInvoke, IsInvoking, enabled, Time.timeScale, frame rate, find all with tag, find by type, parent / children'],
     ['リスト: 値付きで作る・ランダムに 1 つ・最後の要素・空か・まとめて追加・配列に変換・合計 / 最大 / 最小 / 平均など', 'Lists: create with values, random item, last item, is empty, add range, to array, sum / max / min / average and more'],

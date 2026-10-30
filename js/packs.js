@@ -79,8 +79,8 @@ function registerPack(pack, user = false) {
   Blockly.defineBlocksWithJsonArray(withHelp(defs));
   // ツールボックス (例の値を穴にはめた状態で並べる)
   const example = ex => ex == null ? undefined : 'var' in ex ? { block: { type: 'var_get', fields: { NAME: ex.var } } }
-    : 'number' in ex ? { shadow: { type: 'math_number', fields: { NUM: ex.number } } } : 'text' in ex ? { shadow: { type: 'text', fields: { TEXT: ex.text } } }
-      : 'bool' in ex ? { shadow: { type: 'logic_boolean', fields: { BOOL: ex.bool ? 'TRUE' : 'FALSE' } } } : ex.block ? { block: ex.block } : undefined;
+    : 'number' in ex ? { block: { type: 'math_number', fields: { NUM: ex.number } } } : 'text' in ex ? { block: { type: 'text', fields: { TEXT: ex.text } } }
+      : 'bool' in ex ? { block: { type: 'logic_boolean', fields: { BOOL: ex.bool ? 'TRUE' : 'FALSE' } } } : ex.block ? { block: ex.block } : undefined;
   const name = packText(pack.category?.name || pack.name || pack.id);
   const item = blk => {
     const inputs = {};

@@ -1,13 +1,13 @@
 // 左側のツールボックスとサンプルプログラム
 // ---------- ツールボックス ----------
-const num = n => ({ shadow: { type: 'math_number', fields: { NUM: n } } });
-const txt = t => ({ shadow: { type: 'text', fields: { TEXT: t } } });
+const num = n => ({ block: { type: 'math_number', fields: { NUM: n } } });
+const txt = t => ({ block: { type: 'text', fields: { TEXT: t } } });
 const vget = n => ({ block: { type: 'var_get', fields: { NAME: n } } });
 const cat = (name, colour, blocks) => ({ kind: 'category', name, colour, contents: blocks.map(x => typeof x === 'string' ? { kind: 'block', type: x } : { kind: 'block', ...x }) });
 const toolbox = { kind: 'categoryToolbox', contents: [
   cat('クラス', C.cls, ['class_def', 'field_def', 'property_def', 'property_expr', 'method_def', 'constructor_def', 'enum_def', 'return_stmt', 'method_call', 'method_call_expr',
     'new_object', { type: 'new_object_init', fields: { NAME: 'ContactFilter2D' }, inputs: { INITS: { block: { type: 'init_assign', fields: { NAME: 'useTriggers' },
-      inputs: { VALUE: { shadow: { type: 'logic_boolean', fields: { BOOL: 'FALSE' } } } } } } } }, 'init_assign',
+      inputs: { VALUE: { block: { type: 'logic_boolean', fields: { BOOL: 'FALSE' } } } } } } } }, 'init_assign',
     { type: 'generic_call', inputs: { OBJ: vget('go') } }, { type: 'call_on', inputs: { OBJ: { block: { type: 'get_component', fields: { TYPE: 'Rigidbody' } } } } }]),
   cat('Unity', C.unity, ['unity_event', { type: 'debug_log', inputs: { MSG: txt('Hello') } },
     { type: 'transform_action', inputs: { VEC: { block: { type: 'vector3_const', fields: { DIR: 'forward' } } } } },
@@ -16,7 +16,7 @@ const toolbox = { kind: 'categoryToolbox', contents: [
     { type: 'quaternion_euler', inputs: { X: num(0), Y: num(90), Z: num(0) } }, 'time_value', 'input_key', 'input_axis', 'mouse_button']),
   cat('オブジェクト', 35, ['get_component', 'add_component', 'find_object', 'instantiate',
     { type: 'destroy', inputs: { OBJ: { block: { type: 'raw_expr', fields: { CODE: 'gameObject' } } } } },
-    { type: 'set_active', inputs: { OBJ: { block: { type: 'raw_expr', fields: { CODE: 'gameObject' } } }, BOOL: { shadow: { type: 'logic_boolean', fields: { BOOL: 'FALSE' } } } } },
+    { type: 'set_active', inputs: { OBJ: { block: { type: 'raw_expr', fields: { CODE: 'gameObject' } } }, BOOL: { block: { type: 'logic_boolean', fields: { BOOL: 'FALSE' } } } } },
     { type: 'compare_tag', inputs: { OBJ: vget('other') } },
     { type: 'rb_addforce', inputs: { RB: { block: { type: 'get_component', fields: { TYPE: 'Rigidbody' } } }, VEC: { block: { type: 'vector3_const', fields: { DIR: 'up' } } } } },
     'color_const', { type: 'load_scene', inputs: { SCENE: txt('GameScene') } }]),
@@ -54,7 +54,7 @@ const toolbox = { kind: 'categoryToolbox', contents: [
     { type: 'prop_set', fields: { PROP: 'fillAmount' }, inputs: { OBJ: vget('image'), VALUE: num(0.5) } }]),
   cat('サウンド・アニメ', 340, [{ type: 'audio_play', inputs: { OBJ: vget('audioSource') } }, { type: 'audio_oneshot', inputs: { OBJ: vget('audioSource'), CLIP: vget('clip') } },
     { type: 'prop_set', fields: { PROP: 'volume' }, inputs: { OBJ: vget('audioSource'), VALUE: num(0.5) } },
-    { type: 'anim_trigger', inputs: { OBJ: vget('animator') } }, { type: 'anim_set', inputs: { OBJ: vget('animator'), VALUE: { shadow: { type: 'logic_boolean' } } } }]),
+    { type: 'anim_trigger', inputs: { OBJ: vget('animator') } }, { type: 'anim_set', inputs: { OBJ: vget('animator'), VALUE: { block: { type: 'logic_boolean' } } } }]),
   cat('セーブ・アプリ', 100, [{ type: 'prefs_set', inputs: { VALUE: num(0) } }, { type: 'prefs_get', inputs: { DEF: num(0) } }, 'prefs_save', 'app_quit']),
   cat('その他', C.misc, ['expr_stmt', 'raw_stmt', 'raw_expr', 'raw_member', 'using_def']),
 ] };
@@ -97,7 +97,7 @@ const sample = { blocks: { languageVersion: 0, blocks: [
 const tget = p => ({ block: { type: 'transform_get', fields: { PROP: p } } });
 const blk = (type, fields = {}) => ({ block: { type, fields } });
 const addBlocks = (name, items) => toolbox.contents.find(c => c.name === name).contents.push(...cat('', 0, items).contents);
-addBlocks('ループ', [{ type: 'for_step', inputs: { FROM: num(10), TO: num(0) } }, { type: 'do_while', inputs: { COND: { shadow: { type: 'logic_boolean' } } } }]);
+addBlocks('ループ', [{ type: 'for_step', inputs: { FROM: num(10), TO: num(0) } }, { type: 'do_while', inputs: { COND: { block: { type: 'logic_boolean' } } } }]);
 addBlocks('ロジック', [{ type: 'is_type', inputs: { VALUE: vget('other') } }, { type: 'as_expr', inputs: { VALUE: vget('other') } },
   { type: 'null_coalesce', inputs: { A: vget('target'), B: vget('gameObject') } }, 'try_catch']);
 addBlocks('数値・文字', ['math_const', 'interp_string', { type: 'to_string_fmt', inputs: { VALUE: { block: { type: 'time_value', fields: { PROP: 'time' } } } } },

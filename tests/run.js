@@ -343,6 +343,18 @@ async function qolTests(browser, base) {
   check('テスト中にエラーがない (テーマ)', !p4.errors.length, p4.errors.join(' / '));
   await p4.context().close();
 
+  // 最初から入っている値のブロックを外せる (シャドウブロックにしない)
+  const OLD = { active: 0, files: [{ name: 'Old.cs', state: { blocks: { languageVersion: 0, blocks: [{ type: 'class_def', x: 20, y: 20, fields: { SER: false, ACCESS: 'public', NAME: 'Old', BASE: 'MonoBehaviour' },
+    inputs: { MEMBERS: { block: { type: 'unity_event', fields: { EVENT: 'Start()' }, inputs: { BODY: { block: { type: 'debug_log', fields: { LEVEL: 'Log' }, inputs: { MSG: { shadow: { type: 'text', fields: { TEXT: 'old' } } } } } } } } } } }] } } }] };
+  const p5 = await open(browser, base, 'ja', { 'unity-block-coder-project': JSON.stringify(OLD) });
+  check('前の版で保存したプロジェクトの値も、外せるブロックになる', await p5.evaluate(() => ws.getAllBlocks(false).length > 0 && !ws.getAllBlocks(false).some(x => x.isShadow())));
+  const at = await p5.evaluate(() => { const r = ws.getAllBlocks(false).find(x => x.type === 'text').getSvgRoot().getBoundingClientRect(); return { x: r.x + 6, y: r.y + r.height / 2 }; });
+  await p5.mouse.move(at.x, at.y); await p5.mouse.down(); await p5.mouse.move(at.x + 150, at.y + 220, { steps: 12 }); await p5.mouse.up(); await p5.waitForTimeout(300);
+  check('値のブロックをドラッグで外せる (外したあと同じ値が出てこない)', await p5.evaluate(() => !ws.getAllBlocks(false).find(x => x.type === 'debug_log').getInputTargetBlock('MSG') && ws.getTopBlocks(false).some(x => x.type === 'text')));
+  check('ツールボックスの例の値もシャドウブロックではない', await p5.evaluate(() => toolbox.contents.every(c => (c.contents || []).every(it => !JSON.stringify(it).includes('"shadow"')))));
+  check('テスト中にエラーがない (値のブロック)', !p5.errors.length, p5.errors.join(' / '));
+  await p5.context().close();
+
   // キーボードでのコピー・貼り付け (本物のクリップボードを使う)
   const p3 = await open(browser, base, 'ja', {}, { permissions: ['clipboard-read', 'clipboard-write'] });
   const pos = await p3.evaluate(() => { const r = ws.getAllBlocks(false).find(x => x.type === 'debug_log').getSvgRoot().getBoundingClientRect(); return { x: r.x + 12, y: r.y + 10 }; });

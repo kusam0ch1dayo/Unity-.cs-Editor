@@ -59,6 +59,7 @@ function loadActive() {
   try { ws.clear(); Blockly.serialization.workspaces.load(project.files[project.active].state || {}, ws); }
   catch (e) { ws.clear(); Blockly.serialization.workspaces.load(sample, ws); }
   finally { Blockly.Events.enable(); }
+  unshadow(ws.getAllBlocks(false));   // 前の版で保存したシャドウブロックも外せるように
   ws.clearUndo();
   update();
 }
