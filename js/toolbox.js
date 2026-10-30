@@ -34,7 +34,7 @@ const toolbox = { kind: 'categoryToolbox', contents: [
     { type: 'math_func1', inputs: { X: num(-1) } }, { type: 'math_func2', inputs: { A: num(1), B: num(2) } },
     { type: 'math_func3', inputs: { A: num(0), B: num(0), C: num(10) } }, { type: 'cast_expr', inputs: { VALUE: num(1.5) } },
     { type: 'random_range', inputs: { A: num(0), B: num(10) } }, 'text', 'to_string', { type: 'text_concat', inputs: { A: txt('スコア: ') } }]),
-  cat('リスト', C.list, ['list_new', { type: 'array_new', inputs: { SIZE: num(8) } }, { type: 'list_add', inputs: { LIST: vget('list') } }, { type: 'list_remove', inputs: { LIST: vget('list'), VALUE: num(0) } },
+  cat('リスト', C.list, ['list_new', 'list_init', { type: 'array_new', inputs: { SIZE: num(8) } }, { type: 'list_add', inputs: { LIST: vget('list') } }, { type: 'list_remove', inputs: { LIST: vget('list'), VALUE: num(0) } },
     { type: 'list_clear', inputs: { LIST: vget('list') } }, { type: 'list_get', inputs: { LIST: vget('list'), INDEX: num(0) } },
     { type: 'list_set', inputs: { LIST: vget('list'), INDEX: num(0) } }, { type: 'list_count', inputs: { LIST: vget('list') } },
     { type: 'list_contains', inputs: { LIST: vget('list') } }, { type: 'list_foreach', inputs: { LIST: vget('list') } },
@@ -42,7 +42,7 @@ const toolbox = { kind: 'categoryToolbox', contents: [
     { type: 'list_order', inputs: { LIST: vget('list') } }]),
   cat('辞書', 300, ['dict_new', { type: 'dict_add', inputs: { LIST: vget('dict'), KEY: txt('key'), VALUE: num(0) } },
     { type: 'list_get', inputs: { LIST: vget('dict'), INDEX: txt('key') } }, { type: 'list_set', inputs: { LIST: vget('dict'), INDEX: txt('key'), VALUE: num(0) } },
-    { type: 'dict_contains', inputs: { LIST: vget('dict'), KEY: txt('key') } }, { type: 'dict_remove', inputs: { LIST: vget('dict'), KEY: txt('key') } },
+    { type: 'dict_contains', inputs: { LIST: vget('dict'), KEY: txt('key') } }, { type: 'dict_try_get_if', inputs: { LIST: vget('dict'), KEY: txt('key') } }, { type: 'dict_remove', inputs: { LIST: vget('dict'), KEY: txt('key') } },
     { type: 'list_count', inputs: { LIST: vget('dict') } }]),
   cat('Raycast', 15, [
     { type: 'raycast_if', inputs: { ORIGIN: { block: { type: 'transform_get', fields: { PROP: 'position' } } }, DIR: { block: { type: 'transform_get', fields: { PROP: 'forward' } } }, DIST: num(10) } },

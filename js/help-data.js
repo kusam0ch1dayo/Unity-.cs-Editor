@@ -113,6 +113,10 @@ H('list_insert', ['リストに挿入', 'Insert into list'], ['指定した番�
 H('list_index_of', ['リストの何番目か', 'Index of'], ['値が何番目にあるかを返します。ないときは -1 です。', 'Returns the index of a value, or -1 if missing.']);
 H('list_order', ['並べ替え / 逆順', 'Sort / Reverse'], ['Sort で小さい順に並べ、Reverse で順番を逆にします。', 'Sort orders items ascending; Reverse flips the order.']);
 H('array_new', ['配列を作る', 'New array'], ['決まった数だけ入る入れ物を作ります。数は後から変えられません。', 'Creates a fixed-size container.'], { c: 'language-reference/builtin-types/arrays' });
+H('list_init', ['リストを値付きで作る', 'List with values'], ['最初から値が入ったリストを作ります。例: new List<int> { 1, 2, 3 }', 'Creates a list that already has values, e.g. new List<int> { 1, 2, 3 }.'],
+  { c: 'programming-guide/classes-and-structs/object-and-collection-initializers' });
+H('dict_try_get_if', ['辞書から取り出せたら', 'If the dictionary has the key'], ['キーがあれば値を取り出して中を実行します。ContainsKey と取り出しを 1 回で行えます。',
+  'If the key exists, gets its value and runs the inside. Checks and reads in one step.'], { u: 'https://learn.microsoft.com/dotnet/api/system.collections.generic.dictionary-2.trygetvalue' });
 H('array_init', ['配列を値付きで作る', 'Array with values'], ['最初から値が入った配列を作ります。', 'Creates an array that already has values.'], { c: 'language-reference/builtin-types/arrays' });
 H('dict_new', ['新しい辞書', 'New dictionary'], ['キー (名前) と値をセットで覚える入れ物。例: アイテム名 → 個数', 'Stores key → value pairs, e.g. item name → count.'], { c: 'programming-guide/concepts/collections' });
 H('dict_add', ['辞書に追加', 'Add to dictionary'], ['キーと値を追加します。同じキーがあるとエラーになるので、代入ブロックで上書きもできます。', 'Adds a key and value. A duplicate key is an error; use the set block to overwrite.']);

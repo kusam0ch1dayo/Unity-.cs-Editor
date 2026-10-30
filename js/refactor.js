@@ -1,17 +1,17 @@
 // 名前の一括変更 (ブロックを右クリック →「名前を一括変更」または F2)
 // 宣言しているブロックと名前のフィールド
 const DECL = { field_def: 'NAME', property_def: 'NAME', property_expr: 'NAME', method_def: 'NAME', coroutine_def: 'NAME', class_def: 'NAME', enum_def: 'NAME',
-  var_local: 'NAME', list_foreach: 'VAR', for_range: 'VAR', for_step: 'VAR', try_catch: 'VAR', try_get_component_if: 'VAR', raycast_if: 'HIT', raycast_mouse_if: 'HIT' };
+  var_local: 'NAME', list_foreach: 'VAR', for_range: 'VAR', for_step: 'VAR', try_catch: 'VAR', try_get_component_if: 'VAR', dict_try_get_if: 'VAR', raycast_if: 'HIT', raycast_mouse_if: 'HIT' };
 // 名前を参照しているフィールド: 先頭が名前のパス / 型名 / C# のコード
 const REF_PATH = { var_get: ['NAME'], var_set: ['NAME'], var_incr: ['NAME'], tuple_assign: ['NAME1', 'NAME2'], hit_get: ['HIT'], case_clause: ['VALUE'],
   switch_arm: ['PATTERN'], method_call: ['NAME'], method_call_expr: ['NAME'], start_coroutine: ['NAME'], invoke_stmt: ['NAME'], invoke_repeating: ['NAME'],
   button_listener: ['NAME'] };
 const REF_TYPE = { field_def: ['TYPE'], var_local: ['TYPE'], method_def: ['RET', 'PARAMS'], property_def: ['TYPE'], property_expr: ['TYPE'], list_new: ['TYPE'],
   list_foreach: ['TYPE'], dict_new: ['KEY', 'VAL'], get_component: ['TYPE'], add_component: ['TYPE'], new_object: ['NAME'], new_object_init: ['NAME'],
-  generic_call: ['TYPE'], array_new: ['TYPE'], array_init: ['TYPE'], cast_any: ['TYPE'], as_expr: ['TYPE'], is_type: ['TYPE'], try_get_component_if: ['TYPE'],
+  generic_call: ['TYPE'], array_new: ['TYPE'], array_init: ['TYPE'], list_init: ['TYPE'], dict_try_get_if: ['TYPE'], cast_any: ['TYPE'], as_expr: ['TYPE'], is_type: ['TYPE'], try_get_component_if: ['TYPE'],
   try_catch: ['TYPE'], class_def: ['BASE'], constructor_def: ['PARAMS'], coroutine_def: ['PARAMS'], lambda_expr: ['PARAMS'], lambda_block: ['PARAMS'] };
 const REF_TEXT = { raw_stmt: ['CODE'], raw_expr: ['CODE'], raw_member: ['CODE'], interp_string: ['TEXT'], method_call: ['ARGS'], method_call_expr: ['ARGS'],
-  new_object: ['ARGS'], new_object_init: ['ARGS'], call_on: ['ARGS'], generic_call: ['ARGS'], start_coroutine: ['ARGS'], array_init: ['ITEMS'],
+  new_object: ['ARGS'], new_object_init: ['ARGS'], call_on: ['ARGS'], generic_call: ['ARGS'], start_coroutine: ['ARGS'], array_init: ['ITEMS'], list_init: ['ITEMS'],
   attr: ['CODE'], class_attr: ['CODE'] };
 const SCOPE_OWNERS = ['method_def', 'unity_event', 'coroutine_def', 'constructor_def', 'lambda_block', 'property_expr'];
 
@@ -23,7 +23,7 @@ function declScope(decl) {
     while (p && !SCOPE_OWNERS.includes(p.type)) p = p.getSurroundParent();
     return (p || decl).getDescendants(false);
   }
-  if (['list_foreach', 'for_range', 'for_step', 'try_catch', 'try_get_component_if', 'raycast_if', 'raycast_mouse_if'].includes(decl.type)) return decl.getDescendants(false);
+  if (['list_foreach', 'for_range', 'for_step', 'try_catch', 'try_get_component_if', 'dict_try_get_if', 'raycast_if', 'raycast_mouse_if'].includes(decl.type)) return decl.getDescendants(false);
   const cls = decl.getSurroundParent();
   return cls ? cls.getDescendants(false) : ws.getAllBlocks(false);
 }

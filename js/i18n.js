@@ -64,7 +64,7 @@ const I18N = {
   'float の数値 (例: 5f)': 'A float number (e.g. 5f)', 'for int %1 = %2 ～ %3 未満': 'for int %1 = %2 to below %3',
   'new したときに実行される処理。名前はクラス名になります': 'Runs when created with new. Its name is the class name',
   'switch 式 (値を返す switch)': 'switch expression (a switch that returns a value)', 'yield break (コルーチン終了)': 'yield break (end the coroutine)',
-  'yield return null (1フレーム待つ)': 'yield return null (wait one frame)', 'もし %1 .TryGetComponent(out %2 %3 )': 'if %1 .TryGetComponent(out %2 %3 )',
+  'yield return null (1フレーム待つ)': 'yield return null (wait one frame)', 'もし %1 .TryGetComponent(out %2 %3 )': 'if %1 .TryGetComponent(out %2 %3 )', 'もし %1 .TryGetValue( %2 , out %3 %4 )': 'if %1 .TryGetValue( %2 , out %3 %4 )',
   'もし Physics.Raycast( %1 , %2 , out RaycastHit %3 , %4 )': 'if Physics.Raycast( %1 , %2 , out RaycastHit %3 , %4 )',
   'もし マウス位置から Raycast ( out RaycastHit %1 , 距離 %2 )': 'if Raycast from mouse ( out RaycastHit %1 , distance %2 )',
   'オブジェクトのプロパティに代入 (例: slider.value, image.fillAmount, rb.velocity)': 'Assign to a property of an object (e.g. slider.value, image.fillAmount, rb.velocity)',

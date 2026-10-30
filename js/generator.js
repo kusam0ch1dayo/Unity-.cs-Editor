@@ -82,6 +82,7 @@ G.var_set = b => `${f(b, 'NAME')} ${f(b, 'OP')} ${v(b, 'VALUE', O.ASSIGN, 'defau
 G.var_get = b => [f(b, 'NAME'), O.ATOMIC];
 
 G.list_new = b => [`new List<${f(b, 'TYPE')}>()`, O.MEMBER];
+G.list_init = b => [`new List<${f(b, 'TYPE')}> { ${f(b, 'ITEMS')} }`, O.MEMBER];
 G.list_add = b => `${v(b, 'LIST', O.MEMBER, 'list')}.Add(${v(b, 'VALUE', O.NONE, 'default')});\n`;
 G.list_remove = b => `${v(b, 'LIST', O.MEMBER, 'list')}.${f(b, 'OP')}(${v(b, 'VALUE', O.NONE, '0')});\n`;
 G.list_clear = b => `${v(b, 'LIST', O.MEMBER, 'list')}.Clear();\n`;
@@ -227,6 +228,7 @@ G.input_button = b => [`Input.${f(b, 'MODE')}(${lit(f(b, 'NAME'))})`, O.MEMBER];
 G.instantiate_one = b => [`Instantiate(${v(b, 'PREFAB', O.NONE, 'null')})`, O.MEMBER];
 G.instantiate_rot = b => [`Instantiate(${v(b, 'PREFAB', O.NONE, 'null')}, ${v(b, 'POS', O.NONE, 'Vector3.zero')}, ${v(b, 'ROT', O.NONE, 'Quaternion.identity')})`, O.MEMBER];
 G.dont_destroy = b => `DontDestroyOnLoad(${v(b, 'OBJ', O.NONE, 'gameObject')});\n`;
+G.dict_try_get_if = b => block(`if (${v(b, 'LIST', O.MEMBER, 'dict')}.TryGetValue(${v(b, 'KEY', O.NONE, '""')}, out ${f(b, 'TYPE')} ${f(b, 'VAR')}))`, b, 'DO');
 G.try_get_component_if = b => { const o = v(b, 'OBJ', O.MEMBER); return block(`if (${o ? o + '.' : ''}TryGetComponent(out ${f(b, 'TYPE')} ${f(b, 'VAR')}))`, b, 'DO'); };
 G.cursor_lock = b => `Cursor.lockState = CursorLockMode.${f(b, 'MODE')};\n`;
 G.scene_info = b => [`SceneManager.GetActiveScene().${f(b, 'PROP')}`, O.MEMBER];

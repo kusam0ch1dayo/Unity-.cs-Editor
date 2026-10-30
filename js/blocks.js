@@ -75,6 +75,8 @@ Blockly.defineBlocksWithJsonArray(withHelp(i18nBlocks([
     args1: [{ type: 'input_statement', name: 'DO' }] },
   // リスト
   { type: 'list_new', message0: 'new List< %1 >()', output: null, colour: C.list, args0: [{ type: 'field_ac', ac: 'type', name: 'TYPE', text: 'int' }] },
+  { type: 'list_init', message0: 'new List< %1 > { %2 }', output: null, colour: C.list,
+    args0: [{ type: 'field_ac', ac: 'type', name: 'TYPE', text: 'int' }, { type: 'field_ac', ac: 'var', name: 'ITEMS', text: '1, 2, 3' }] },
   { type: 'list_add', message0: '%1 .Add( %2 )', colour: C.list, ...STMT, inputsInline: true,
     args0: [{ type: 'input_value', name: 'LIST' }, { type: 'input_value', name: 'VALUE' }] },
   { type: 'list_remove', message0: '%1 . %2 ( %3 )', colour: C.list, ...STMT, inputsInline: true,
@@ -328,6 +330,9 @@ Blockly.defineBlocksWithJsonArray(withHelp(i18nBlocks([
   { type: 'try_get_component_if', message0: 'もし %1 .TryGetComponent(out %2 %3 )', message1: '%1', colour: 35, ...STMT, inputsInline: true,
     args0: [{ type: 'input_value', name: 'OBJ' }, { type: 'field_ac', ac: 'component', name: 'TYPE', text: 'Rigidbody2D' }, { type: 'field_input', name: 'VAR', text: 'rb' }],
     args1: [{ type: 'input_statement', name: 'DO' }], tooltip: 'コンポーネントがあれば中を実行。左を空にすると自分自身' },
+  { type: 'dict_try_get_if', message0: 'もし %1 .TryGetValue( %2 , out %3 %4 )', message1: '%1', colour: 300, ...STMT, inputsInline: true,
+    args0: [{ type: 'input_value', name: 'LIST' }, { type: 'input_value', name: 'KEY' }, { type: 'field_ac', ac: 'type', name: 'TYPE', text: 'int' }, { type: 'field_input', name: 'VAR', text: 'value' }],
+    args1: [{ type: 'input_statement', name: 'DO' }] },
   { type: 'cursor_lock', message0: 'Cursor.lockState = CursorLockMode. %1', colour: 35, ...STMT,
     args0: [{ type: 'field_dropdown', name: 'MODE', options: ['Locked', 'None', 'Confined'].map(d => [d, d]) }] },
   { type: 'scene_info', message0: 'SceneManager.GetActiveScene(). %1', output: null, colour: 35,

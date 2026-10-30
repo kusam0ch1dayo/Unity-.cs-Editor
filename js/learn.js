@@ -156,7 +156,9 @@ const BASIC = new Set(['class_def', 'field_def', 'method_def', 'unity_event', 'r
   'debug_log', 'transform_action', 'transform_set', 'transform_get', 'vector3_new', 'vector3_const', 'vector2_new', 'time_value', 'input_key', 'input_axis', 'input_button',
   'get_component', 'instantiate', 'destroy', 'compare_tag', 'set_active', 'rb_addforce', 'rb2d_addforce', 'controls_if', 'logic_compare', 'logic_operation', 'logic_negate',
   'logic_boolean', 'controls_repeat_ext', 'for_range', 'controls_whileUntil', 'math_number', 'number_f', 'math_arithmetic', 'random_range', 'text', 'text_concat',
-  'list_new', 'list_add', 'list_get', 'list_count', 'list_foreach', 'coroutine_def', 'yield_wait', 'start_coroutine', 'ui_set_text', 'audio_play', 'audio_oneshot', 'load_scene']);
+  'list_new', 'list_add', 'list_get', 'list_count', 'list_foreach', 'coroutine_def', 'yield_wait', 'start_coroutine', 'ui_set_text', 'audio_play', 'audio_oneshot', 'load_scene',
+  'invoke_stmt', 'invoke_repeating', 'cancel_invoke', 'list_init', 'list_remove', 'list_clear', 'list_contains', 'list_random_item', 'list_is_empty', 'controls_flow_statements',
+  'math_modulo', 'dict_new', 'dict_add', 'dict_try_get_if', 'time_scale', 'str_length', 'find_object', 'find_all_tag']);
 const BEGINNER_KEY = 'unity-block-coder-beginner';
 let beginner = false;
 try { beginner = localStorage.getItem(BEGINNER_KEY) === '1'; } catch (e) {}

@@ -123,6 +123,8 @@ const Imp = {
     const a = al.namedChildren.filter(c => c.type === 'argument');
     return a.some(x => x.namedChildren.length !== 1 || /^(out|ref|in)\b/.test(this.t(x))) ? null : a.map(x => x.namedChildren[0]);
   },
+  // { a, b, c } の中身を「a, b, c」の形にそろえる (元の空白や改行に左右されないように)
+  items(init) { return init.namedChildren.filter(c => c.type !== 'comment').map(c => this.flat(c)).join(', '); },
   argText(inv) { const al = inv.childForFieldName('arguments'); return al ? this.flat(al).slice(1, -1).trim() : ''; },
   generic(fn) {
     if (fn.type === 'generic_name') return { target: null, g: fn };
@@ -307,6 +309,11 @@ const Imp = {
     const fn = cond.childForFieldName('function'), a = cond.childForFieldName('arguments').namedChildren.filter(c => c.type === 'argument');
     const name = fn.type === 'identifier' ? this.t(fn) : fn.type === 'member_access_expression' ? this.t(fn.childForFieldName('name')) : '';
     const m = a.length === 1 && this.flat(a[0]).match(/^out\s+([\w.<>]+)\s+(\w+)$/);
+    // dict.TryGetValue(key, out T value)
+    const m2 = a.length === 2 && this.flat(a[1]).match(/^out\s+([\w.<>\[\], ]+?)\s+(\w+)$/);
+    if (name === 'TryGetValue' && m2 && fn.type === 'member_access_expression')
+      return this.B('dict_try_get_if', { TYPE: m2[1], VAR: m2[2] }, { LIST: this.val('dict_try_get_if', 'LIST', fn.childForFieldName('expression')),
+        KEY: this.val('dict_try_get_if', 'KEY', a[0].namedChildren[0]), DO: this.body(body) });
     if (name !== 'TryGetComponent' || !m) return null;
     return this.B('try_get_component_if', { TYPE: m[1], VAR: m[2] }, { OBJ: fn.type === 'member_access_expression' && this.val('try_get_component_if', 'OBJ', fn.childForFieldName('expression')),
       DO: this.body(body) });
@@ -498,11 +505,22 @@ const Imp = {
     if (T === 'cast_expression') return this.B('cast_any', { TYPE: this.t(n.childForFieldName('type')) }, { VALUE: V('cast_any', 'VALUE', n.childForFieldName('value')) });
     if (T === 'array_creation_expression' && n.namedChildren.length === 2 && n.namedChildren[1].type === 'initializer_expression') {
       const at = n.namedChildren[0], rank = at.childForFieldName('rank');
-      if (rank && !rank.namedChildren.length) return this.B('array_init', { TYPE: this.t(at.childForFieldName('type')), ITEMS: this.flat(n.namedChildren[1]).slice(1, -1).trim() });
+      if (rank && !rank.namedChildren.length) return this.B('array_init', { TYPE: this.t(at.childForFieldName('type')), ITEMS: this.items(n.namedChildren[1]) });
     }
     if (T === 'element_access_expression') {
       const a = n.childForFieldName('subscript').namedChildren.filter(c => c.type === 'argument');
       if (a.length === 1) return this.B('list_get', {}, { LIST: V('list_get', 'LIST', n.childForFieldName('expression')), INDEX: V('list_get', 'INDEX', a[0].namedChildren[0]) });
+    }
+    // new List<T> { 1, 2, 3 }
+    if (T === 'object_creation_expression') {
+      const ty = this.t(n.childForFieldName('type')), init = n.namedChildren.find(c => c.type === 'initializer_expression'), lm = ty.match(/^List<(.+)>$/);
+      if (lm && init && !this.argText(n) && init.namedChildren.every(c => c.type !== 'assignment_expression' && c.type !== 'initializer_expression'))
+        return this.B('list_init', { TYPE: lm[1], ITEMS: this.items(init) });
+    }
+    // string[] names = { "a", "b" }; (型を省いた配列の初期化) は new string[] { ... } と同じブロックにする
+    if (T === 'initializer_expression' && n.parent && n.parent.type === 'equals_value_clause') {
+      const decl = n.parent.parent && n.parent.parent.parent, ty = decl && this.t(decl.childForFieldName('type'));
+      if (ty && /^[\w.<>]+\[\]$/.test(ty)) return this.B('array_init', { TYPE: ty.slice(0, -2), ITEMS: this.items(n) });
     }
     if (T === 'object_creation_expression') {
       const init = n.namedChildren.find(c => c.type === 'initializer_expression'), items = init ? init.namedChildren.filter(c => c.type !== 'comment') : [];

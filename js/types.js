@@ -181,7 +181,7 @@ function scopeOf(b) {
     if (p.type === 'list_foreach') add(f(p, 'VAR'), f(p, 'TYPE').trim() === 'var' ? elemOf(typeOf(p.getInputTargetBlock('LIST'))) : f(p, 'TYPE').trim());
     else if (p.type === 'for_range' || p.type === 'for_step') add(f(p, 'VAR'), 'int');
     else if (p.type === 'raycast_if' || p.type === 'raycast_mouse_if') add(f(p, 'HIT'), 'RaycastHit');
-    else if (p.type === 'try_catch' || p.type === 'try_get_component_if') add(f(p, 'VAR'), f(p, 'TYPE').trim());
+    else if (p.type === 'try_catch' || p.type === 'try_get_component_if' || p.type === 'dict_try_get_if') add(f(p, 'VAR'), f(p, 'TYPE').trim());
     else if (p.type === 'lambda_block') params(f(p, 'PARAMS')).forEach(([t, n]) => add(n, t));
     else if (['method_def', 'constructor_def', 'coroutine_def'].includes(p.type) && !method) {
       method = { ret: p.type === 'method_def' ? f(p, 'RET').trim() : p.type === 'coroutine_def' ? 'IEnumerator' : 'void' };
@@ -240,7 +240,7 @@ function typeOf(b) {
     case 'transform_get': return MEMBERS.Transform[f(b, 'PROP')];
     case 'get_component': return f(b, 'TYPE').trim();
     case 'new_object': return f(b, 'NAME').trim();
-    case 'list_new': return `List<${f(b, 'TYPE').trim()}>`;
+    case 'list_new': case 'list_init': return `List<${f(b, 'TYPE').trim()}>`;
     case 'list_get': { const t = A('LIST'), d = dictOf(t); return d ? d[1] : elemOf(t); }
     case 'cast_expr': return f(b, 'TYPE');
     case 'to_string': return 'string';

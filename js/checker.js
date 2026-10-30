@@ -46,7 +46,7 @@ const REQUIRED = { list_add: ['LIST', 'VALUE'], list_remove: ['LIST', 'VALUE'], 
   list_set: ['LIST', 'INDEX', 'VALUE'], list_count: ['LIST'], list_contains: ['LIST', 'VALUE'], list_foreach: ['LIST'], var_set: ['VALUE'],
   expr_stmt: ['EXPR'], instantiate: ['PREFAB'], controls_if: ['IF0'], controls_whileUntil: ['BOOL'], logic_compare: ['A', 'B'],
   logic_operation: ['A', 'B'], logic_negate: ['BOOL'], text_concat: ['A', 'B'], list_insert: ['LIST', 'INDEX', 'VALUE'],
-  list_index_of: ['LIST', 'VALUE'], list_order: ['LIST'], dict_add: ['LIST', 'KEY', 'VALUE'], dict_contains: ['LIST', 'KEY'], dict_remove: ['LIST', 'KEY'],
+  list_index_of: ['LIST', 'VALUE'], dict_try_get_if: ['LIST', 'KEY'], list_order: ['LIST'], dict_add: ['LIST', 'KEY', 'VALUE'], dict_contains: ['LIST', 'KEY'], dict_remove: ['LIST', 'KEY'],
   ui_set_text: ['OBJ', 'VALUE'], prop_set: ['OBJ', 'VALUE'], prop_get: ['OBJ'], button_listener: ['OBJ'], audio_play: ['OBJ'], audio_oneshot: ['OBJ', 'CLIP'],
   anim_trigger: ['OBJ'], anim_set: ['OBJ', 'VALUE'], prefs_set: ['VALUE'],
   do_while: ['COND'], is_type: ['VALUE'], as_expr: ['VALUE'], cast_any: ['VALUE'], null_coalesce: ['A', 'B'], button_listener_lambda: ['OBJ', 'FN'],
@@ -157,14 +157,17 @@ function check() {
         else assign(b, m.ret, vb);
         break;
       }
-      case 'list_new': type(b, f(b, 'TYPE').trim(), 'TYPE'); break;
+      case 'list_new': case 'list_init': type(b, f(b, 'TYPE').trim(), 'TYPE'); break;
       case 'get_component': {
         const t = f(b, 'TYPE').trim();
         type(b, t, 'TYPE');
         if (MODEL.has(t) && !isMono(MODEL.get(t))) E(b, `'${t}' はコンポーネントではありません`);
         break;
       }
-      case 'list_add': case 'list_contains': want(b, 'VALUE', listOf(b)); break;
+      case 'list_contains':
+        if (typeOf(b.getInputTargetBlock('LIST')) === 'string') { want(b, 'VALUE', 'string'); break; }   // 文字列の Contains (部分を含むか)
+        want(b, 'VALUE', listOf(b)); break;
+      case 'list_add': want(b, 'VALUE', listOf(b)); break;
       case 'list_set': { const [k, val] = listOrDict(b); want(b, 'VALUE', val); want(b, 'INDEX', k); break; }
       case 'list_get': want(b, 'INDEX', listOrDict(b)[0]); break;
       case 'list_remove': { const el = listOf(b); want(b, 'VALUE', f(b, 'OP') === 'RemoveAt' ? 'int' : el); break; }
@@ -319,6 +322,11 @@ function check() {
       case 'dict_new': type(b, f(b, 'KEY').trim(), 'KEY'); type(b, f(b, 'VAL').trim(), 'VAL'); break;
       case 'dict_add': { const [k, val] = dictOfBlock(b); want(b, 'KEY', k); want(b, 'VALUE', val); break; }
       case 'dict_contains': case 'dict_remove': want(b, 'KEY', dictOfBlock(b)[0]); break;
+      case 'dict_try_get_if': {
+        const [k, val] = dictOfBlock(b); want(b, 'KEY', k); type(b, f(b, 'TYPE').trim(), 'TYPE'); name(b, 'VAR');
+        if (val !== '?' && knownType(f(b, 'TYPE').trim()) && !assignable(f(b, 'TYPE').trim(), val)) E(b, `'${val}' を '${f(b, 'TYPE').trim()}' に変換できません`);
+        break;
+      }
 
       case 'vector3_new': ['X', 'Y', 'Z'].forEach(n => want(b, n, 'float')); break;
       case 'random_range': want(b, 'A', 'float'); want(b, 'B', 'float'); break;

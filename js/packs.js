@@ -36,14 +36,16 @@ function registerPack(pack, user = false) {
     MEMBERS[name] = { ...(t.component ? COMP : {}), ...(t.members || {}) };
   }
   for (const [name, members] of Object.entries(pack.statics || {})) STATICS[name] = { ...(STATICS[name] || {}), ...members };
+  // into: 既存のカテゴリ (例 'リスト') に入れるとき、そのカテゴリ。ブロックごとにも指定できる
+  const intoCat = name => name && toolbox.contents.find(c => c.name === name && !c.pack);
   const defs = [];
   for (const blk of pack.blocks) {
-    const inputs = blk.inputs || {}, fields = blk.fields || {}, isValue = blk.output !== undefined;
+    const inputs = blk.inputs || {}, fields = blk.fields || {}, isValue = blk.output !== undefined, into = intoCat(blk.into || pack.category?.into);
     // 表示 (ラベルの {NAME} を Blockly の %1 などに)
     const args = [];
     const message0 = packText(blk.label).replace(PH, (m, name) => { args.push(name); return '%' + args.length; });
     defs.push({
-      type: blk.type, message0, colour: blk.colour ?? pack.colour ?? 200, inputsInline: true,
+      type: blk.type, message0, colour: blk.colour ?? pack.colour ?? into?.colour ?? 200, inputsInline: true,
       args0: args.map(name => inputs[name] ? { type: 'input_value', name }
         : fields[name].options ? { type: 'field_dropdown', name, options: fields[name].options.map(o => Array.isArray(o) ? [packText(o[0]), String(o[1])] : [String(o), String(o)]) }
           : { type: 'field_input', name, text: String(fields[name].text ?? '') }),
@@ -51,7 +53,10 @@ function registerPack(pack, user = false) {
     });
     // C# 生成 ({NAME} の直後が . や [ なら、つなぐ値を () で囲む必要があるかを考える)
     const code = blk.code;
-    const order = blk.order === 'none' ? O.NONE : blk.order === 'member' ? O.MEMBER : /^[^\s]*$/.test(code.replace(/"[^"]*"/g, '')) ? O.MEMBER : O.NONE;
+    // 結合の強さ: 文字列と ( ) [ ] < > の中を除いて、空白や演算子が残らなければ「メンバー参照」と同じ (a.b(...) や a[...] の形)
+    let outer = code.replace(/"[^"]*"|'[^']*'/g, '""');
+    for (let prev = null; prev !== outer;) { prev = outer; outer = outer.replace(/\([^()]*\)|\[[^\[\]]*\]|<[^<>]*>/g, ''); }
+    const order = blk.order === 'none' ? O.NONE : blk.order === 'member' ? O.MEMBER : /^[^\s]*$/.test(outer) ? O.MEMBER : O.NONE;
     G[blk.type] = b => {
       const out = code.replace(PH, (m, name, at) => inputs[name]
         ? v(b, name, /^[.[]/.test(code.slice(at + m.length)) ? O.MEMBER : O.NONE, inputs[name].default ?? 'default')
@@ -77,12 +82,20 @@ function registerPack(pack, user = false) {
     : 'number' in ex ? { shadow: { type: 'math_number', fields: { NUM: ex.number } } } : 'text' in ex ? { shadow: { type: 'text', fields: { TEXT: ex.text } } }
       : 'bool' in ex ? { shadow: { type: 'logic_boolean', fields: { BOOL: ex.bool ? 'TRUE' : 'FALSE' } } } : ex.block ? { block: ex.block } : undefined;
   const name = packText(pack.category?.name || pack.name || pack.id);
-  const contents = pack.blocks.map(blk => {
+  const item = blk => {
     const inputs = {};
     for (const [n, spec] of Object.entries(blk.inputs || {})) { const e = example(spec.example); if (e) inputs[n] = e; }
     return { kind: 'block', type: blk.type, inputs };
-  });
-  const cat = { kind: 'category', name, colour: pack.category?.colour ?? pack.colour ?? 200, contents, pack: pack.id };
+  };
+  const own = [];
+  for (const blk of pack.blocks) {
+    const into = intoCat(blk.into || pack.category?.into);
+    if (!into) { own.push(item(blk)); continue; }
+    into.contents = into.contents.filter(it => it.type !== blk.type);   // 読み込み直したときに重ならないように
+    into.contents.push(item(blk));
+  }
+  if (!own.length) return;
+  const cat = { kind: 'category', name, colour: pack.category?.colour ?? pack.colour ?? 200, contents: own, pack: pack.id };
   const i = toolbox.contents.findIndex(c => c.pack === pack.id);
   if (i >= 0) toolbox.contents[i] = cat;
   else toolbox.contents.splice(Math.max(0, toolbox.contents.length - 1), 0, cat);
@@ -156,5 +169,5 @@ async function handlePackSettings(e) {
 }
 
 // 標準のパックと、保存してあるパックを登録
-for (const p of window.BLOCK_PACKS || []) registerPack(p);
+for (const p of window.BLOCK_PACKS || []) { try { registerPack(p); } catch (e) { console.error(e.message); } }   // 1 つが壊れていても、ほかのパックは読み込む
 for (const p of userPacks()) { try { registerPack(p, true); } catch (e) { console.warn(e.message); } }
